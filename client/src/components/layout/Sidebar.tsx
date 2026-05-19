@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Package, Users, Calendar, ShoppingCart,
   ArchiveX, RotateCcw, BarChart3, BarChart2, Bell, Settings,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Briefcase, Banknote,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useAuthStore } from '@/store/authStore';
@@ -16,6 +16,8 @@ const NAV_ITEMS = [
   { path: '/returns', label: 'Returns', icon: RotateCcw, module: 'returns' },
   { path: '/products', label: 'Products', icon: Package, module: 'products' },
   { path: '/customers', label: 'Customers', icon: Users, module: 'customers' },
+  { path: '/employees', label: 'Employees', icon: Briefcase, module: 'employees' },
+  { path: '/payroll',   label: 'Payroll',   icon: Banknote,  module: 'payroll'   },
   { path: '/inventory', label: 'Inventory', icon: ArchiveX, module: 'inventory' },
   { path: '/reports', label: 'Reports', icon: BarChart3, module: 'reports' },
   { path: '/analytics', label: 'Analytics', icon: BarChart2, module: 'analytics' },
