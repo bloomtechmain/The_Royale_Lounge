@@ -124,7 +124,7 @@ export default function NewRentalPage() {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="max-w-3xl">
+    <div>
       <div className="page-header">
         <h2 className="page-title">New Rental Booking</h2>
         <Button variant="secondary" onClick={() => navigate('/rentals')}>Cancel</Button>
