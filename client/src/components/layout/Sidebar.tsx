@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Package, Users, Calendar, ShoppingCart,
   ArchiveX, RotateCcw, BarChart3, Bell, Settings,
-  ChevronLeft, ChevronRight, Crown,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useAuthStore } from '@/store/authStore';
@@ -38,9 +38,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 p-4 border-b border-charcoal-600 h-16 flex-shrink-0">
-        <div className="w-9 h-9 rounded-xl bg-gold-gradient flex items-center justify-center flex-shrink-0">
-          <Crown size={18} className="text-charcoal-900" />
-        </div>
+        <img
+          src="/logo.jpg"
+          alt="The Royale Lounge"
+          className="w-9 h-9 rounded-xl object-cover flex-shrink-0"
+        />
         <AnimatePresence>
           {!collapsed && (
             <motion.div
@@ -50,7 +52,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               transition={{ duration: 0.15 }}
               className="overflow-hidden"
             >
-              <p className="font-display font-semibold text-charcoal-50 leading-tight text-sm">The Outfit Lounge</p>
+              <p className="font-display font-semibold text-charcoal-50 leading-tight text-sm">The Royale Lounge</p>
               <p className="text-xs text-gold-600">POS & Rental</p>
             </motion.div>
           )}

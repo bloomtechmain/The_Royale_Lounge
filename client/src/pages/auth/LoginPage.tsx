@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Crown, Eye, EyeOff, LogIn } from 'lucide-react';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/authService';
@@ -51,10 +51,12 @@ export default function LoginPage() {
         <div className="bg-charcoal-700 border border-charcoal-500 rounded-3xl p-8 shadow-card">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-gold-gradient flex items-center justify-center shadow-gold mb-4">
-              <Crown size={26} className="text-charcoal-900" />
-            </div>
-            <h1 className="font-display text-2xl font-semibold text-charcoal-50">Royal Tailor</h1>
+            <img
+              src="/logo.jpg"
+              alt="The Royale Lounge"
+              className="w-20 h-20 rounded-2xl object-cover shadow-gold mb-4"
+            />
+            <h1 className="font-display text-2xl font-semibold text-charcoal-50">The Royale Lounge</h1>
             <p className="text-charcoal-200 text-sm mt-1">POS & Rental Management</p>
           </div>
 
@@ -123,7 +125,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-charcoal-300 mt-6">
-          © {new Date().getFullYear()} Royal Tailor Shop. All rights reserved.
+          © {new Date().getFullYear()} The Royale Lounge. All rights reserved.
         </p>
       </motion.div>
     </div>
