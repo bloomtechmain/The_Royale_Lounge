@@ -143,11 +143,11 @@ export default function POSPage() {
   };
 
   const handleProductCardClick = (product: any) => {
-    const variants = (product.variants || []).filter((v: any) => v.stock_quantity > 0);
-    const allVariants = product.variants || [];
-    if (allVariants.length === 1) {
-      if (allVariants[0].stock_quantity > 0) handleAddProduct(product, allVariants[0]);
-    } else {
+    const saleQty = (v: any) => Math.max(0, (v.stock_quantity || 0) - (v.available_for_rent || 0));
+    const saleVariants = (product.variants || []).filter((v: any) => saleQty(v) > 0);
+    if (saleVariants.length === 1) {
+      handleAddProduct(product, saleVariants[0]);
+    } else if (saleVariants.length > 1) {
       setVariantPickerProduct(product);
     }
   };
@@ -242,9 +242,11 @@ export default function POSPage() {
               {products.data.map((product: any) => {
                 const variants: any[] = product.variants || [];
                 if (variants.length === 0) return null;
-                const totalStock = variants.reduce((s: number, v: any) => s + (v.stock_quantity || 0), 0);
-                const inStock = totalStock > 0;
-                const lowestPrice = Math.min(...variants.map((v: any) => parseFloat(v.selling_price || product.selling_price || 0)));
+                const saleQty = (v: any) => Math.max(0, (v.stock_quantity || 0) - (v.available_for_rent || 0));
+                const totalSaleStock = variants.reduce((s: number, v: any) => s + saleQty(v), 0);
+                const inStock = totalSaleStock > 0;
+                const saleVariants = variants.filter((v: any) => saleQty(v) > 0);
+                const lowestPrice = Math.min(...(saleVariants.length ? saleVariants : variants).map((v: any) => parseFloat(v.selling_price || product.selling_price || 0)));
                 const multipleVariants = variants.length > 1;
 
                 return (
@@ -280,7 +282,7 @@ export default function POSPage() {
                           {multipleVariants ? 'From ' : ''}{formatCurrency(lowestPrice)}
                         </span>
                         <span className={cn('text-xs', inStock ? 'text-charcoal-200' : 'text-red-400')}>
-                          {totalStock} left
+                          {totalSaleStock} left
                         </span>
                       </div>
                     </div>
@@ -540,7 +542,8 @@ export default function POSPage() {
                 <div className="p-4 grid grid-cols-2 gap-2 max-h-80 overflow-y-auto">
                   {(variantPickerProduct.variants || []).map((v: any) => {
                     const price = parseFloat(v.selling_price || variantPickerProduct.selling_price || 0);
-                    const available = v.stock_quantity > 0;
+                    const forSale = Math.max(0, (v.stock_quantity || 0) - (v.available_for_rent || 0));
+                    const available = forSale > 0;
                     return (
                       <button
                         key={v.id}
@@ -563,7 +566,7 @@ export default function POSPage() {
                         </div>
                         <span className="text-sm font-semibold text-gold-400">{formatCurrency(price)}</span>
                         <span className={cn('text-xs mt-0.5', available ? 'text-charcoal-300' : 'text-red-400')}>
-                          {available ? `${v.stock_quantity} in stock` : 'Out of stock'}
+                          {available ? `${forSale} for sale` : 'No sale stock'}
                         </span>
                       </button>
                     );
