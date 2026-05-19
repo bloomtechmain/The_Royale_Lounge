@@ -7,18 +7,19 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useAuthStore } from '@/store/authStore';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const NAV_ITEMS = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/pos', label: 'POS', icon: ShoppingCart, highlight: true },
-  { path: '/rentals', label: 'Rentals', icon: Calendar },
-  { path: '/returns', label: 'Returns', icon: RotateCcw },
-  { path: '/products', label: 'Products', icon: Package },
-  { path: '/customers', label: 'Customers', icon: Users },
-  { path: '/inventory', label: 'Inventory', icon: ArchiveX },
-  { path: '/reports', label: 'Reports', icon: BarChart3 },
-  { path: '/notifications', label: 'Notifications', icon: Bell },
-  { path: '/settings', label: 'Settings', icon: Settings },
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
+  { path: '/pos', label: 'POS', icon: ShoppingCart, highlight: true, module: 'pos' },
+  { path: '/rentals', label: 'Rentals', icon: Calendar, module: 'rentals' },
+  { path: '/returns', label: 'Returns', icon: RotateCcw, module: 'returns' },
+  { path: '/products', label: 'Products', icon: Package, module: 'products' },
+  { path: '/customers', label: 'Customers', icon: Users, module: 'customers' },
+  { path: '/inventory', label: 'Inventory', icon: ArchiveX, module: 'inventory' },
+  { path: '/reports', label: 'Reports', icon: BarChart3, module: 'reports' },
+  { path: '/notifications', label: 'Notifications', icon: Bell, module: 'notifications' },
+  { path: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
 ];
 
 interface SidebarProps {
@@ -29,6 +30,8 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { user } = useAuthStore();
   const location = useLocation();
+  const { hasPermission } = usePermissions();
+  const visibleItems = NAV_ITEMS.filter(({ module }) => hasPermission(module, 'read'));
 
   return (
     <motion.aside
@@ -61,7 +64,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1 scrollbar-thin no-scrollbar">
-        {NAV_ITEMS.map(({ path, label, icon: Icon, highlight }) => {
+        {visibleItems.map(({ path, label, icon: Icon, highlight }) => {
           const active = location.pathname.startsWith(path);
           return (
             <NavLink

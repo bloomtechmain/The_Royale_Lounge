@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings as SettingsIcon, Users, Store, Bell, DollarSign, Shield, Plus, Pencil, Trash2, RefreshCw } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Store, Bell, DollarSign, Shield, Plus, Pencil, Trash2, RefreshCw, Check, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { settingsService } from '@/services/settingsService';
+import { permissionsService } from '@/services/permissionsService';
+import type { RolePermissionsMap } from '@/services/permissionsService';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
@@ -19,6 +21,7 @@ const TABS = [
   { key: 'fines', label: 'Fine Rules', icon: DollarSign },
   { key: 'notifications', label: 'Notifications', icon: Bell },
   { key: 'users', label: 'Users', icon: Users },
+  { key: 'permissions', label: 'Permissions', icon: Shield },
 ] as const;
 
 type TabKey = typeof TABS[number]['key'];
@@ -95,6 +98,7 @@ export default function SettingsPage() {
               {activeTab === 'fines' && <FineSettings settings={settings} onSave={(u) => updateMutation.mutate(u)} saving={updateMutation.isPending} />}
               {activeTab === 'notifications' && <NotificationSettings settings={settings} onSave={(u) => updateMutation.mutate(u)} saving={updateMutation.isPending} />}
               {activeTab === 'users' && <UserManagement />}
+              {activeTab === 'permissions' && <RolePermissionsMatrix />}
             </>
           )}
         </div>
@@ -576,5 +580,186 @@ function UserManagement() {
         </div>
       </Drawer>
     </div>
+  );
+}
+
+// ─── Role Permissions Matrix ─────────────────────────────────────────────────
+const MODULES = [
+  { key: 'dashboard',     label: 'Dashboard' },
+  { key: 'pos',           label: 'POS' },
+  { key: 'rentals',       label: 'Rentals' },
+  { key: 'returns',       label: 'Returns' },
+  { key: 'products',      label: 'Products' },
+  { key: 'customers',     label: 'Customers' },
+  { key: 'inventory',     label: 'Inventory' },
+  { key: 'reports',       label: 'Reports' },
+  { key: 'notifications', label: 'Notifications' },
+  { key: 'settings',      label: 'Settings' },
+];
+
+const CONFIGURABLE_ROLES: { key: string; label: string; color: string }[] = [
+  { key: 'manager',         label: 'Manager',         color: 'text-purple-400' },
+  { key: 'cashier',         label: 'Cashier',         color: 'text-blue-400' },
+  { key: 'inventory_staff', label: 'Inventory Staff', color: 'text-green-400' },
+];
+
+type LocalPerms = Record<string, Record<string, { can_read: boolean; can_write: boolean }>>;
+
+function RolePermissionsMatrix() {
+  const qc = useQueryClient();
+  const [local, setLocal] = useState<LocalPerms | null>(null);
+
+  const { data: serverPerms, isLoading } = useQuery({
+    queryKey: ['permissions'],
+    queryFn: permissionsService.getAll,
+  });
+
+  // Merge server data into local on first load (don't overwrite user edits)
+  const perms: LocalPerms = local ?? (serverPerms as LocalPerms) ?? {};
+
+  const toggle = (role: string, module: string, access: 'can_read' | 'can_write') => {
+    setLocal((prev) => {
+      const base: LocalPerms = prev ?? (serverPerms as LocalPerms) ?? {};
+      const rolePerms = base[role] ?? {};
+      const modPerms = rolePerms[module] ?? { can_read: false, can_write: false };
+      let next = { ...modPerms, [access]: !modPerms[access] };
+      // Write requires Read; unchecking Read also unchecks Write
+      if (access === 'can_write' && next.can_write) next.can_read = true;
+      if (access === 'can_read' && !next.can_read) next.can_write = false;
+      return { ...base, [role]: { ...rolePerms, [module]: next } };
+    });
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: () => {
+      const updates: { role: string; module: string; can_read: boolean; can_write: boolean }[] = [];
+      for (const role of CONFIGURABLE_ROLES.map((r) => r.key)) {
+        for (const mod of MODULES.map((m) => m.key)) {
+          const p = perms[role]?.[mod] ?? { can_read: false, can_write: false };
+          updates.push({ role, module: mod, can_read: p.can_read, can_write: p.can_write });
+        }
+      }
+      return permissionsService.update(updates);
+    },
+    onSuccess: () => {
+      toast.success('Permissions saved!');
+      setLocal(null);
+      qc.invalidateQueries({ queryKey: ['permissions'] });
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to save permissions'),
+  });
+
+  const isDirty = local !== null;
+
+  if (isLoading) {
+    return (
+      <Card>
+        <div className="space-y-3">{[1,2,3,4].map((i) => <div key={i} className="h-10 bg-charcoal-600 rounded-xl animate-pulse" />)}</div>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card padding="none">
+        <div className="p-5 border-b border-charcoal-600 flex items-center justify-between">
+          <div>
+            <h4 className="text-base font-semibold text-charcoal-50">Role Permissions</h4>
+            <p className="text-xs text-charcoal-200 mt-0.5">Control which modules each role can access. Super Admin always has full access.</p>
+          </div>
+          <Button
+            variant="primary"
+            onClick={() => saveMutation.mutate()}
+            loading={saveMutation.isPending}
+            disabled={!isDirty}
+          >
+            Save Permissions
+          </Button>
+        </div>
+
+        {/* Super admin badge */}
+        <div className="mx-5 mt-4 mb-2 flex items-center gap-2 px-4 py-2.5 bg-gold-700/10 border border-gold-700/30 rounded-xl">
+          <Shield size={14} className="text-gold-400 flex-shrink-0" />
+          <p className="text-xs text-gold-300">
+            <span className="font-semibold">Super Admin</span> — unrestricted access to all modules, not configurable.
+          </p>
+        </div>
+
+        {/* Matrix table */}
+        <div className="overflow-x-auto px-5 pb-5">
+          <table className="w-full min-w-[600px] mt-3">
+            <thead>
+              <tr>
+                <th className="text-left text-xs font-medium text-charcoal-200 pb-3 pr-4 w-36">Module</th>
+                {CONFIGURABLE_ROLES.map((role) => (
+                  <th key={role.key} colSpan={2} className={cn('text-center text-xs font-semibold pb-3 px-2', role.color)}>
+                    {role.label}
+                  </th>
+                ))}
+              </tr>
+              <tr>
+                <th className="pb-2" />
+                {CONFIGURABLE_ROLES.map((role) => (
+                  <>
+                    <th key={`${role.key}-r`} className="text-center text-xs text-charcoal-300 pb-2 w-14">Read</th>
+                    <th key={`${role.key}-w`} className="text-center text-xs text-charcoal-300 pb-2 w-14">Write</th>
+                  </>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-charcoal-600/50">
+              {MODULES.map((mod) => (
+                <tr key={mod.key} className="hover:bg-charcoal-600/20 transition-colors">
+                  <td className="py-3 pr-4 text-sm font-medium text-charcoal-100">{mod.label}</td>
+                  {CONFIGURABLE_ROLES.map((role) => {
+                    const p = perms[role.key]?.[mod.key] ?? { can_read: false, can_write: false };
+                    return (
+                      <>
+                        <td key={`${role.key}-${mod.key}-r`} className="py-3 text-center">
+                          <PermToggle
+                            checked={p.can_read}
+                            onChange={() => toggle(role.key, mod.key, 'can_read')}
+                          />
+                        </td>
+                        <td key={`${role.key}-${mod.key}-w`} className="py-3 text-center">
+                          <PermToggle
+                            checked={p.can_write}
+                            onChange={() => toggle(role.key, mod.key, 'can_write')}
+                            disabled={!p.can_read}
+                          />
+                        </td>
+                      </>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <p className="text-xs text-charcoal-300 px-1">
+        Write access requires Read access. Changes take effect when users next load a page.
+      </p>
+    </div>
+  );
+}
+
+function PermToggle({ checked, onChange, disabled = false }: { checked: boolean; onChange: () => void; disabled?: boolean }) {
+  return (
+    <button
+      onClick={disabled ? undefined : onChange}
+      disabled={disabled}
+      className={cn(
+        'w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all duration-150 mx-auto',
+        disabled
+          ? 'border-charcoal-600 bg-charcoal-700/30 cursor-not-allowed opacity-40'
+          : checked
+          ? 'border-gold-600 bg-gold-700/20 text-gold-400 hover:bg-gold-700/30'
+          : 'border-charcoal-500 bg-charcoal-600/30 text-transparent hover:border-charcoal-300 hover:text-charcoal-400'
+      )}
+    >
+      {checked ? <Check size={13} strokeWidth={2.5} /> : <Minus size={13} strokeWidth={2} />}
+    </button>
   );
 }
