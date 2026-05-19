@@ -64,10 +64,9 @@ export default function RentalDetailPage() {
   if (!rental) return <div className="text-charcoal-200">Rental not found.</div>;
 
   const nextStatuses = STATUS_TRANSITIONS[rental.status] || [];
-  const paidFromRecords = (rental.payments || []).reduce((sum: number, p: any) => {
+  const totalPaid = (rental.payments || []).reduce((sum: number, p: any) => {
     return p.payment_type !== 'refund' ? sum + parseFloat(p.amount) : sum - parseFloat(p.amount);
   }, 0);
-  const totalPaid = Number(rental.advance_payment || 0) + paidFromRecords;
   const balanceDue = Math.max(0, Number(rental.total_rental_cost) - totalPaid + Number(rental.total_fine || 0));
 
   return (
