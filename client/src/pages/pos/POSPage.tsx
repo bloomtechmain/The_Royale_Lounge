@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -486,8 +487,9 @@ export default function POSPage() {
         )}
       </div>
 
-      {/* Variant Picker */}
-      <AnimatePresence>
+      {/* Variant Picker — portal to body to escape any transform stacking context */}
+      {createPortal(
+        <AnimatePresence>
         {variantPickerProduct && (
           <>
             <motion.div
@@ -564,7 +566,9 @@ export default function POSPage() {
             </motion.div>
           </>
         )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Checkout Modal */}
       <Drawer
