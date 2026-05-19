@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Outfit Lounge – Administrator Manual</title>
+<style>
+  :root {
+    --gold: #b48c50;
+    --gold-light: #d4a96a;
+    --gold-pale: #f7f0e4;
+    --dark: #1a1a26;
+    --gray: #6b6b80;
+    --light: #f5f5f8;
+    --border: #e0ddd8;
+    --red: #dc2626;
+    --green: #16a34a;
+    --blue: #2563eb;
+    --amber: #d97706;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #222;
+    background: #fff;
+  }
+
+  /* ── Cover ─────────────────────────────── */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, #1a1a26 60%, #2e2218 100%);
+    color: #fff;
+    text-align: center;
+    padding: 40px;
+    page-break-after: always;
+  }
+  .cover img { width: 110px; height: 110px; object-fit: cover; border-radius: 20px; border: 3px solid var(--gold); margin-bottom: 28px; }
+  .cover h1 { font-size: 36px; font-weight: 800; color: var(--gold-light); letter-spacing: 1px; }
+  .cover h2 { font-size: 20px; font-weight: 400; color: #ccc; margin-top: 6px; }
+  .cover .badge { display: inline-block; margin-top: 24px; padding: 6px 20px; border: 1px solid var(--gold); border-radius: 99px; font-size: 11px; color: var(--gold-light); letter-spacing: 2px; text-transform: uppercase; }
+  .cover .meta { margin-top: 40px; font-size: 12px; color: #888; }
+
+  /* ── Layout ─────────────────────────────── */
+  .page { max-width: 800px; margin: 0 auto; padding: 40px 48px; }
+
+  /* ── TOC ─────────────────────────────── */
+  .toc { page-break-after: always; }
+  .toc h2 { font-size: 22px; color: var(--gold); border-bottom: 2px solid var(--gold); padding-bottom: 8px; margin-bottom: 20px; }
+  .toc ol { padding-left: 20px; }
+  .toc li { padding: 5px 0; color: #444; font-size: 13px; }
+  .toc li span { color: var(--gray); float: right; }
+  .toc .sub { padding-left: 20px; font-size: 12px; }
+
+  /* ── Section Headings ─────────────────── */
+  h2.section {
+    font-size: 20px;
+    color: #fff;
+    background: linear-gradient(90deg, var(--dark) 0%, #2a2a3a 100%);
+    padding: 12px 18px;
+    border-left: 5px solid var(--gold);
+    border-radius: 6px;
+    margin: 36px 0 20px;
+  }
+  h3.sub { font-size: 15px; color: var(--dark); border-left: 3px solid var(--gold-light); padding-left: 10px; margin: 24px 0 12px; }
+  h4.label { font-size: 13px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; margin: 16px 0 6px; }
+
+  /* ── Callouts ─────────────────────────── */
+  .tip   { background: #ecfdf5; border-left: 4px solid var(--green); padding: 10px 14px; border-radius: 4px; margin: 12px 0; font-size: 12px; }
+  .warn  { background: #fffbeb; border-left: 4px solid var(--amber); padding: 10px 14px; border-radius: 4px; margin: 12px 0; font-size: 12px; }
+  .info  { background: #eff6ff; border-left: 4px solid var(--blue);  padding: 10px 14px; border-radius: 4px; margin: 12px 0; font-size: 12px; }
+  .danger{ background: #fef2f2; border-left: 4px solid var(--red);   padding: 10px 14px; border-radius: 4px; margin: 12px 0; font-size: 12px; }
+  .tip strong, .warn strong, .info strong, .danger strong { display: block; margin-bottom: 3px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ── Steps ────────────────────────────── */
+  .steps { counter-reset: step; padding-left: 0; list-style: none; }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: var(--light);
+    border-radius: 8px;
+  }
+  .steps li::before {
+    content: counter(step);
+    min-width: 24px;
+    height: 24px;
+    background: var(--gold);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ── Role Badges ──────────────────────── */
+  .role { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; text-transform: uppercase; margin: 0 2px; }
+  .role-admin   { background: #fee2e2; color: #991b1b; }
+  .role-manager { background: #fef3c7; color: #92400e; }
+  .role-cashier { background: #dbeafe; color: #1e40af; }
+  .role-staff   { background: #d1fae5; color: #065f46; }
+  .role-all     { background: #f3f4f6; color: #374151; }
+
+  /* ── Tables ───────────────────────────── */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+  th { background: var(--dark); color: var(--gold-light); padding: 8px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 7px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: var(--light); }
+
+  /* ── Mock UI ──────────────────────────── */
+  .mockup {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 14px 0;
+    font-size: 12px;
+  }
+  .mockup-bar {
+    background: var(--dark);
+    color: var(--gold-light);
+    padding: 7px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mockup-body { background: #f9f9fb; padding: 14px; }
+  .mock-card {
+    display: inline-block;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin: 4px;
+    min-width: 120px;
+    text-align: center;
+  }
+  .mock-card .val { font-size: 18px; font-weight: 700; color: var(--gold); }
+  .mock-card .lbl { font-size: 10px; color: var(--gray); }
+  .mock-row { display: flex; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
+  .mock-btn { padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .mock-btn-gold { background: var(--gold); color: #fff; }
+  .mock-btn-outline { background: #fff; border: 1px solid var(--border); color: #444; }
+  .mock-input { border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 11px; color: #666; background: #fff; min-width: 140px; }
+  .mock-table-head { background: var(--dark); color: var(--gold-light); padding: 6px 10px; font-size: 10px; border-radius: 4px 4px 0 0; }
+  .mock-table-row { background: #fff; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 11px; display: flex; justify-content: space-between; }
+  .badge-green { background: #d1fae5; color: #065f46; padding: 2px 7px; border-radius: 99px; font-size: 10px; }
+  .badge-amber { background: #fef3c7; color: #92400e; padding: 2px 7px; border-radius: 99px; font-size: 10px; }
+  .badge-red   { background: #fee2e2; color: #991b1b; padding: 2px 7px; border-radius: 99px; font-size: 10px; }
+  .badge-blue  { background: #dbeafe; color: #1e40af; padding: 2px 7px; border-radius: 99px; font-size: 10px; }
+  .badge-gray  { background: #f3f4f6; color: #374151; padding: 2px 7px; border-radius: 99px; font-size: 10px; }
+
+  /* ── Divider ──────────────────────────── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+
+  /* ── Print ───────────────────────────── */
+  @media print {
+    .cover { min-height: 100vh; }
+    h2.section { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .mockup-bar, th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .tip, .warn, .info, .danger { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .steps li::before { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { padding: 24px 36px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ COVER ═══════════════════ -->
+<div class="cover">
+  <img src="/logo.jpg" alt="Logo" onerror="this.style.display='none'" />
+  <h1>The Outfit Lounge</h1>
+  <h2>Administrator &amp; Manager Manual</h2>
+  <div class="badge">POS &amp; Rental Management System</div>
+  <div class="meta">Version 1.0 &nbsp;·&nbsp; May 2026 &nbsp;·&nbsp; Confidential</div>
+</div>
+
+<!-- ═══════════════════ PAGE WRAPPER ═══════════════════ -->
+<div class="page">
+
+<!-- ─── TABLE OF CONTENTS ─── -->
+<div class="toc">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li>Getting Started — Login &amp; Roles <span>3</span></li>
+    <li>Dashboard Overview <span>4</span></li>
+    <li>Point of Sale (POS) <span>5</span></li>
+    <li>Rentals Management <span>7</span></li>
+    <li>Returns &amp; Fines <span>9</span></li>
+    <li>Products Catalog <span>11</span></li>
+    <li>Inventory Management <span>12</span></li>
+    <li>Customer Management <span>13</span></li>
+    <li>Employees &amp; Leave <span>14</span></li>
+    <li>Payroll <span>16</span></li>
+    <li>Reports &amp; Analytics <span>17</span></li>
+    <li>Notifications <span>19</span></li>
+    <li>Settings <span>20</span></li>
+    <li>Permissions Matrix <span>23</span></li>
+    <li>Quick Reference <span>24</span></li>
+  </ol>
+</div>
+
+<!-- ═══════════ 1. GETTING STARTED ═══════════ -->
+<h2 class="section">1 · Getting Started — Login &amp; Roles</h2>
+
+<h3 class="sub">Logging In</h3>
+<div class="mockup">
+  <div class="mockup-bar">⬛ Login — The Outfit Lounge</div>
+  <div class="mockup-body">
+    <div style="max-width:300px;margin:auto;text-align:center;padding:20px 0">
+      <div style="font-size:15px;font-weight:700;color:var(--dark);margin-bottom:16px">Sign In to Your Account</div>
+      <div class="mock-input" style="display:block;margin:8px 0">Email address</div>
+      <div class="mock-input" style="display:block;margin:8px 0">Password •••••••••</div>
+      <div class="mock-btn mock-btn-gold" style="display:block;margin:14px 0;text-align:center">Sign In</div>
+    </div>
+  </div>
+</div>
+
+<ol class="steps">
+  <li>Open the application URL in your browser</li>
+  <li>Enter your <strong>email address</strong> and <strong>password</strong></li>
+  <li>Click <strong>Sign In</strong> — you are redirected to the Dashboard</li>
+</ol>
+
+<div class="info"><strong>Default Admin Credentials</strong> Email: admin@tailorshop.com &nbsp;|&nbsp; Password: Admin@1234 — Change after first login.</div>
+
+<h3 class="sub">User Roles</h3>
+<table>
+  <tr><th>Role</th><th>Who Uses It</th><th>Key Access</th></tr>
+  <tr><td><span class="role role-admin">Super Admin</span></td><td>Owner / IT Admin</td><td>Full access to all modules including Settings &amp; Permissions</td></tr>
+  <tr><td><span class="role role-manager">Manager</span></td><td>Store Manager</td><td>All operations + Employees + Payroll (no Settings)</td></tr>
+  <tr><td><span class="role role-cashier">Cashier</span></td><td>Sales Staff</td><td>POS, Rentals, Returns, Customers, Products (read), Reports</td></tr>
+  <tr><td><span class="role role-staff">Inventory Staff</span></td><td>Stock Team</td><td>Products, Inventory (read+write), Customers (read)</td></tr>
+</table>
+<div class="tip"><strong>Tip</strong> Roles and module permissions are fully configurable in Settings → Permissions.</div>
+
+
+<!-- ═══════════ 2. DASHBOARD ═══════════ -->
+<h2 class="section">2 · Dashboard Overview</h2>
+<span class="role role-all">All Roles</span>
+
+<div class="mockup">
+  <div class="mockup-bar">📊 Dashboard</div>
+  <div class="mockup-body">
+    <div class="mock-row">
+      <div class="mock-card"><div class="val">LKR 48,500</div><div class="lbl">Today's Revenue</div></div>
+      <div class="mock-card"><div class="val">12</div><div class="lbl">Active Rentals</div></div>
+      <div class="mock-card"><div class="val" style="color:var(--amber)">5</div><div class="lbl">Pending Returns</div></div>
+      <div class="mock-card"><div class="val" style="color:var(--red)">3</div><div class="lbl">Low Stock Items</div></div>
+    </div>
+    <div style="margin-top:12px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px;">
+      <div style="font-size:11px;font-weight:600;margin-bottom:8px;">Revenue Trend (Last 14 Days)</div>
+      <div style="height:50px;background:var(--light);border-radius:6px;display:flex;align-items:flex-end;padding:4px;gap:2px">
+        <div style="flex:1;background:var(--gold-light);border-radius:2px;height:60%"></div>
+        <div style="flex:1;background:var(--gold-light);border-radius:2px;height:80%"></div>
+        <div style="flex:1;background:var(--gold-light);border-radius:2px;height:55%"></div>
+        <div style="flex:1;background:var(--gold-light);border-radius:2px;height:90%"></div>
+        <div style="flex:1;background:#4ade80;border-radius:2px;height:40%"></div>
+        <div style="flex:1;background:var(--gold-light);border-radius:2px;height:70%"></div>
+        <div style="flex:1;background:#4ade80;border-radius:2px;height:50%"></div>
+        <div style="flex:1;background:var(--gold-light);border-radius:2px;height:100%"></div>
+      </div>
+      <div style="font-size:9px;color:var(--gray);margin-top:4px">■ Sales &nbsp; ■ Rentals</div>
+    </div>
+  </div>
+</div>
+
+<p>The Dashboard is your command center. It shows real-time business health at a glance:</p>
+<table>
+  <tr><th>Card</th><th>Description</th></tr>
+  <tr><td>Today's Revenue</td><td>Combined sales + rental payments received today</td></tr>
+  <tr><td>Active Rentals</td><td>Items currently out with customers</td></tr>
+  <tr><td>Pending Returns</td><td>Rentals due for return — red if overdue</td></tr>
+  <tr><td>Low Stock Items</td><td>Variants with stock ≤ 3 units</td></tr>
+</table>
+
+<h4 class="label">Quick Actions</h4>
+<p>Use the action buttons on the Dashboard to jump straight into common tasks: <strong>New Sale</strong>, <strong>New Rental</strong>, <strong>Add Customer</strong>, <strong>Process Return</strong>, <strong>Add Product</strong>.</p>
+
+
+<!-- ═══════════ 3. POS ═══════════ -->
+<h2 class="section">3 · Point of Sale (POS)</h2>
+<span class="role role-admin">Super Admin</span> <span class="role role-manager">Manager</span> <span class="role role-cashier">Cashier</span>
+
+<p>Use POS to process in-store product sales. Supports barcode scanning, multiple payment methods, and optional customer attachment.</p>
+
+<div class="mockup">
+  <div class="mockup-bar">🛒 Point of Sale</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:12px">
+      <div style="flex:2">
+        <div class="mock-row" style="margin-bottom:8px">
+          <div class="mock-input">Search products or scan barcode...</div>
+          <span class="mock-btn mock-btn-outline">All Categories ▾</span>
+        </div>
+        <div class="mock-row">
+          <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;width:100px;text-align:center;font-size:11px"><div style="font-weight:600">Blazer</div><div style="color:var(--gold);font-size:10px">LKR 1,200/day</div></div>
+          <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;width:100px;text-align:center;font-size:11px"><div style="font-weight:600">Kurta</div><div style="color:var(--gold);font-size:10px">LKR 800</div></div>
+          <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;width:100px;text-align:center;font-size:11px"><div style="font-weight:600">Saree</div><div style="color:var(--gold);font-size:10px">LKR 2,500</div></div>
+        </div>
+      </div>
+      <div style="flex:1;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px">
+        <div style="font-weight:700;margin-bottom:8px">Cart (2 items)</div>
+        <div style="border-bottom:1px solid var(--border);padding:4px 0">Kurta × 1 — LKR 800</div>
+        <div style="border-bottom:1px solid var(--border);padding:4px 0">Blazer × 1 — LKR 1,200</div>
+        <div style="margin-top:8px;font-weight:700">Total: LKR 2,000</div>
+        <div class="mock-btn mock-btn-gold" style="display:block;text-align:center;margin-top:10px">Checkout</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 class="sub">Processing a Sale — Step by Step</h3>
+<ol class="steps">
+  <li>Go to <strong>POS</strong> from the sidebar</li>
+  <li>Search for a product by name/SKU or scan its barcode</li>
+  <li>If the product has multiple sizes/colors, a <strong>variant picker</strong> will appear — select the correct one</li>
+  <li>The item is added to the <strong>Cart</strong> on the right</li>
+  <li>Adjust quantities using <strong>+</strong> / <strong>−</strong> buttons; apply per-item discount if needed</li>
+  <li>Optionally attach a <strong>Customer</strong> using the search field</li>
+  <li>Apply a <strong>cart-level discount</strong> amount if applicable</li>
+  <li>Click <strong>Checkout</strong> to open the payment panel</li>
+  <li>Select <strong>Payment Method</strong> (Cash / Card / Mobile / Bank Transfer)</li>
+  <li>Enter <strong>Amount Paid</strong> — change is calculated automatically</li>
+  <li>Click <strong>Complete Sale</strong> — a receipt is shown; click Print if needed</li>
+</ol>
+
+<div class="warn"><strong>Stock Warning</strong> A sale will fail if all units of the variant are reserved for rental. Check the Inventory page to ensure sale stock is available (Total Stock − For Rent &gt; 0).</div>
+
+<h3 class="sub">Barcode Scanning</h3>
+<ol class="steps">
+  <li>Click inside the <strong>barcode scan field</strong> (top of product panel)</li>
+  <li>Scan the product barcode — it auto-searches and adds to cart</li>
+  <li>If multiple variants match, the variant picker appears</li>
+  <li>Scan repeatedly to add multiple quantities</li>
+</ol>
+
+
+<!-- ═══════════ 4. RENTALS ═══════════ -->
+<h2 class="section">4 · Rentals Management</h2>
+<span class="role role-admin">Super Admin</span> <span class="role role-manager">Manager</span> <span class="role role-cashier">Cashier</span>
+
+<h3 class="sub">Rental Statuses</h3>
+<table>
+  <tr><th>Status</th><th>Meaning</th></tr>
+  <tr><td><span class="badge-gray">Reserved</span></td><td>Booking created, items not yet prepared</td></tr>
+  <tr><td><span class="badge-blue">Ready for Pickup</span></td><td>Items set aside, waiting for customer</td></tr>
+  <tr><td><span class="badge-amber">Picked Up</span></td><td>Customer has items — rental is active</td></tr>
+  <tr><td><span class="badge-green">Completed</span></td><td>All items returned, no outstanding balance</td></tr>
+  <tr><td><span class="badge-amber">Returned</span></td><td>Items back but fine/balance still pending</td></tr>
+  <tr><td><span class="badge-red">Late Return</span></td><td>Past due date and not yet fully returned</td></tr>
+  <tr><td><span class="badge-red">Cancelled</span></td><td>Booking cancelled — inventory restored</td></tr>
+</table>
+
+<h3 class="sub">Creating a New Rental</h3>
+<ol class="steps">
+  <li>Click <strong>Rentals</strong> in the sidebar → click <strong>+ New Rental</strong></li>
+  <li>Search for and select the <strong>Customer</strong></li>
+  <li>Set <strong>Rental Start Date</strong> and <strong>Rental End Date</strong></li>
+  <li>Choose <strong>Event Type</strong> (optional — e.g. Wedding, Prom)</li>
+  <li>Click <strong>Add Item</strong> — search for a product, select variant and quantity. Repeat for multiple items</li>
+  <li>Review the <strong>Total Rental Cost</strong> (auto-calculated: price/day × days)</li>
+  <li>Enter <strong>Advance Payment</strong> amount and select payment method</li>
+  <li>Apply <strong>Discount</strong> if applicable; add any <strong>Notes</strong></li>
+  <li>Click <strong>Create Booking</strong> — a confirmation notification is sent to the customer</li>
+</ol>
+
+<h3 class="sub">Managing Rental Progress</h3>
+
+<div class="mockup">
+  <div class="mockup-bar">📋 Rentals — Kanban View</div>
+  <div class="mockup-body">
+    <div class="mock-row" style="align-items:flex-start">
+      <div style="flex:1;background:var(--light);border-radius:8px;padding:8px;font-size:11px">
+        <div style="font-weight:700;margin-bottom:6px">Reserved (3)</div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px;margin-bottom:5px">#BK-001 · Ahmed Ali<br><span style="color:var(--gray);font-size:10px">Jun 12 – Jun 15 · 3 items</span></div>
+      </div>
+      <div style="flex:1;background:var(--light);border-radius:8px;padding:8px;font-size:11px">
+        <div style="font-weight:700;margin-bottom:6px">Picked Up (5)</div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px;margin-bottom:5px">#BK-008 · Nimal S.<br><span style="color:var(--red);font-size:10px">⚠ 2 days overdue</span></div>
+      </div>
+      <div style="flex:1;background:var(--light);border-radius:8px;padding:8px;font-size:11px">
+        <div style="font-weight:700;margin-bottom:6px">Completed (12)</div>
+        <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px;margin-bottom:5px">#BK-003 · Kamal P.<br><span style="color:var(--green);font-size:10px">✓ No balance</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p>Click any rental card to open its detail view where you can:</p>
+<ul style="padding-left:20px;margin:8px 0">
+  <li>Update the rental <strong>status</strong> (e.g. Reserved → Ready for Pickup → Picked Up)</li>
+  <li>Record additional <strong>payments</strong></li>
+  <li>View all <strong>items, payments, fines, and notification logs</strong></li>
+  <li>Cancel the rental (automatically restores inventory)</li>
+</ul>
+
+<div class="tip"><strong>Tip</strong> Switch between <strong>Table</strong> and <strong>Kanban</strong> views using the icons in the top-right of the Rentals page. Kanban is great for visual status tracking.</div>
+
+
+<!-- ═══════════ 5. RETURNS & FINES ═══════════ -->
+<h2 class="section">5 · Returns &amp; Fines</h2>
+<span class="role role-admin">Super Admin</span> <span class="role role-manager">Manager</span> <span class="role role-cashier">Cashier</span>
+
+<div class="mockup">
+  <div class="mockup-bar">↩ Returns</div>
+  <div class="mockup-body">
+    <div class="mock-row" style="margin-bottom:10px">
+      <div class="mock-card"><div class="val">4</div><div class="lbl">Due Today</div></div>
+      <div class="mock-card"><div class="val" style="color:var(--red)">2</div><div class="lbl">Overdue</div></div>
+      <div class="mock-card"><div class="val">11</div><div class="lbl">Total Pending</div></div>
+    </div>
+    <div class="mock-table-head">Booking # · Customer · Items · Due Date · Status</div>
+    <div class="mock-table-row"><span>#BK-008 · Nimal S. · 2 items · Jun 10</span><span class="badge-red">2 days late</span></div>
+    <div class="mock-table-row"><span>#BK-012 · Seetha K. · 1 item · Jun 12</span><span class="badge-amber">Due today</span></div>
+    <div class="mock-table-row" style="border:none"><span>#BK-015 · Mohamed A. · 3 items · Jun 14</span><span class="badge-gray">2 days left</span></div>
+  </div>
+</div>
+
+<h3 class="sub">Processing a Return — Step by Step</h3>
+<ol class="steps">
+  <li>Go to <strong>Returns</strong> in the sidebar</li>
+  <li>Find the rental and click <strong>Process Return</strong></li>
+  <li>Set the <strong>Return Date</strong> (defaults to today)</li>
+  <li>For each item, select its condition using the three tiles:</li>
+</ol>
+
+<table>
+  <tr><th>Tile</th><th>When to Use</th><th>Charge Applied</th></tr>
+  <tr><td><span class="badge-green">✓ Good</span></td><td>Item returned in acceptable condition</td><td>No extra charge</td></tr>
+  <tr><td><span class="badge-amber">⚠ Damaged</span></td><td>Item has visible damage</td><td>Auto-calculated from Settings (flat or % of rental cost)</td></tr>
+  <tr><td><span class="badge-red">✕ Lost</span></td><td>Item not returned / missing</td><td>Selling price (or custom input for rental-only items)</td></tr>
+</table>
+
+<ol class="steps" start="5">
+  <li>Review the <strong>Charges Summary</strong> at the bottom: late fine + damage/loss charges</li>
+  <li>Select <strong>Payment Method</strong> for collecting the charges</li>
+  <li>Click <strong>Process Return</strong> to confirm</li>
+</ol>
+
+<div class="warn"><strong>Late Fine Calculation</strong> Fine = max(0, days overdue − grace period) × fine per day. The grace period and fine rate are set in <strong>Settings → Fine Rules</strong>.</div>
+<div class="warn"><strong>Damage Charge Rules</strong> Configure in <strong>Settings → Fine Rules → Damage Charges</strong>. Options: None, Flat Amount (LKR), or Percentage of Item's Rental Cost.</div>
+
+
+<!-- ═══════════ 6. PRODUCTS ═══════════ -->
+<h2 class="section">6 · Products Catalog</h2>
+<span class="role role-admin">Super Admin</span> <span class="role role-manager">Manager</span> <span class="role role-cashier">Cashier (read)</span> <span class="role role-staff">Inventory Staff</span>
+
+<h3 class="sub">Product Types</h3>
+<table>
+  <tr><th>Type</th><th>Use Case</th><th>Affects</th></tr>
+  <tr><td><span class="badge-blue">Rental</span></td><td>Items only available for rent</td><td>Rental bookings only</td></tr>
+  <tr><td><span class="badge-green">Sale</span></td><td>Items only available for purchase</td><td>POS sales only</td></tr>
+  <tr><td><span class="badge-amber">Both</span></td><td>Items that can be rented or sold</td><td>Rentals + POS</td></tr>
+</table>
+
+<h3 class="sub">Adding a New Product</h3>
+<ol class="steps">
+  <li>Go to <strong>Products</strong> → click <strong>+ Add Product</strong></li>
+  <li>Fill in: Name, SKU, Category, Type (Rental/Sale/Both)</li>
+  <li>Set <strong>Selling Price</strong> and <strong>Rental Price Per Day</strong></li>
+  <li>Upload a <strong>primary image</strong> (drag &amp; drop or click)</li>
+  <li>In the <strong>Variants</strong> section, click <strong>Add Variant</strong></li>
+  <li>For each variant: set Size, Color, Material, initial Stock Quantity, and Available for Rent count</li>
+  <li>Add a <strong>Barcode</strong> to each variant for POS scanning (optional)</li>
+  <li>Click <strong>Save Product</strong></li>
+</ol>
+
+<h3 class="sub">Printing Barcodes</h3>
+<ol class="steps">
+  <li>Open a product's detail page (click any product)</li>
+  <li>In the Variants table, click the <strong>🖨 Barcode</strong> button on any variant row</li>
+  <li>A preview appears — set the number of copies to print</li>
+  <li>Click <strong>Print</strong> — labels are 60mm wide, ready for a label printer</li>
+</ol>
+
+
+<!-- ═══════════ 7. INVENTORY ═══════════ -->
+<h2 class="section">7 · Inventory Management</h2>
+<span class="role role-admin">Super Admin</span> <span class="role role-manager">Manager</span> <span class="role role-staff">Inventory Staff</span>
+
+<div class="mockup">
+  <div class="mockup-bar">📦 Inventory</div>
+  <div class="mockup-body">
+    <div class="mock-table-head">SKU &nbsp;|&nbsp; Product &nbsp;|&nbsp; Total Stock &nbsp;|&nbsp; For Sale &nbsp;|&nbsp; For Rent &nbsp;|&nbsp; Damaged</div>
+    <div class="mock-table-row"><span>BLZ-M-BLK · Blazer M Black</span><span>8 &nbsp;|&nbsp; <span style="color:var(--green)">3</span> &nbsp;|&nbsp; <span style="color:#2563eb">5</span> &nbsp;|&nbsp; 0</span></div>
+    <div class="mock-table-row"><span>KRT-S-RED · Kurta S Red</span><span><span style="color:var(--red)">2 ⚠</span> &nbsp;|&nbsp; <span style="color:var(--red)">0</span> &nbsp;|&nbsp; <span style="color:#2563eb">2</span> &nbsp;|&nbsp; 1</span></div>
+  </div>
+</div>
+
+<p>The inventory table shows stock split into three columns:</p>
+<table>
+  <tr><th>Column</th><th>Formula</th><th>Meaning</th></tr>
+  <tr><td>Total Stock</td><td>stock_quantity</td><td>Physical items in the shop</td></tr>
+  <tr><td>For Sale <span style="color:var(--green)">●</span></td><td>Total − For Rent</td><td>Units available to sell via POS</td></tr>
+  <tr><td>For Rent <span style="color:var(--blue)">●</span></td><td>available_for_rent</td><td>Units available for new rentals</td></tr>
+</table>
+
+<h3 class="sub">Recording a Stock Movement</h3>
+<ol class="steps">
+  <li>Click <strong>Adjust</strong> on any variant row</li>
+  <li>Select <strong>Movement Type</strong>:</li>
+</ol>
+<table>
+  <tr><th>Type</th><th>Use When</th></tr>
+  <tr><td>Stock In</td><td>Receiving new stock from supplier</td></tr>
+  <tr><td>Stock Out</td><td>Removing items (disposal, donation)</td></tr>
+  <tr><td>Adjustment</td><td>Correcting stock count after physical count</td></tr>
+  <tr><td>Mark Damaged</td><td>Recording damaged items found in store</td></tr>
+</table>
+<ol class="steps" start="3">
+  <li>Enter the <strong>Quantity</strong> and a <strong>Reason / Note</strong></li>
+  <li>Click <strong>Record Movement</strong> — stock is updated immediately</li>
+</ol>
+
+<div class="tip"><strong>Low Stock Alert</strong> Items with ≤ 3 units show a red warning icon. Use the <strong>Low stock only</strong> checkbox to filter these quickly.</div>
+
+
+<!-- ═══════════ 8. CUSTOMERS ═══════════ -->
+<h2 class="section">8 · Customer Management</h2>
+<span class="role role-admin">Super Admin</span> <span class="role role-manager">Manager</span> <span class="role role-cashier">Cashier</span> <span class="role role-staff">Inventory Staff (read)</span>
+
+<h3 class="sub">Adding a Customer</h3>
+<ol class="steps">
+  <li>Go to <strong>Customers</strong> → click <strong>+ Add Customer</strong></li>
+  <li>Fill in <strong>Name</strong>, <strong>Phone</strong>, and optionally Email, WhatsApp, Address, Notes</li>
+  <li>Click <strong>Save Customer</strong></li>
+</ol>
+<div class="tip"><strong>WhatsApp vs Phone</strong> If the customer uses WhatsApp on a different number, enter it in the <em>WhatsApp</em> field. Automated notifications will be sent to WhatsApp if available, otherwise to Phone via SMS.</div>
+
+<p>Click any customer row to view their full profile including rental history, outstanding fines (shown in red), and total spend.</p>
+
+
+<!-- ═══════════ 9. EMPLOYEES ═══════════ -->
+<h2 class="section">9 · Employees &amp; Leave Management</h2>
+<span class="role role-admin">Super Admin</span> <span class="role role-manager">Manager (full)</span> <span class="role role-cashier">Cashier (own leaves)</span> <span class="role role-staff">Inventory Staff (own leaves)</span>
+
+<h3 class="sub">Team Tab (Manager / Admin Only)</h3>
+<ol class="steps">
+  <li>Go to <strong>Employees</strong> → <strong>Team</strong> tab</li>
+  <li>All system users are listed with their role, department, designation, and base salary</li>
+  <li>Click <strong>Edit Profile</strong> on any employee to set HR details: Department, Designation, Base Salary, Join Date, Address, Emergency Contact, Notes</li>
+  <li>Click <strong>Save Profile</strong></li>
+</ol>
+
+<h3 class="sub">Managing Leave Requests (Manager)</h3>
+<ol class="steps">
+  <li>Go to <strong>Employees</strong> → <strong>Leaves</strong> tab</li>
+  <li>Pending requests show with an amber badge</li>
+  <li>Click <strong>✓ Approve</strong> or <strong>✕ Reject</strong> — optionally add a review note</li>
+  <li>The employee receives a system notification of the decision</li>
+</ol>
+
+<h3 class="sub">Leave Calendar</h3>
+<p>The <strong>Calendar</strong> tab shows a monthly view of all leave requests. Green = approved, Amber = pending. Use the arrow buttons to navigate months. Managers see all staff; employees see only their own.</p>
+
+<h4 class="label">Leave Types</h4>
+<table>
+  <tr><th>Type</th><th>Description</th></tr>
+  <tr><td>Annual</td><td>Paid annual leave</td></tr>
+  <tr><td>Sick</td><td>Medical leave</td></tr>
+  <tr><td>Casual</td><td>Short personal leave</td></tr>
+  <tr><td>Unpaid</td><td>Leave without pay</td></tr>
+</table>
+
+
+<!-- ═══════════ 10. PAYROLL ═══════════ -->
+<h2 class="section">10 · Payroll</h2>
+<span class="role role-admin">Super Admin</span> <span class="role role-manager">Manager</span>
+
+<h3 class="sub">Monthly Payroll Workflow</h3>
+<ol class="steps">
+  <li>Go to <strong>Payroll</strong> in the sidebar</li>
+  <li>Select the <strong>month</strong> using the month picker at the top</li>
+  <li>Click <strong>Generate Payroll</strong> — this creates a record for every active employee (skips existing records)</li>
+  <li>For each employee, click <strong>Edit</strong> to open the payroll drawer:
+    <ul style="padding-left:16px;margin-top:4px">
+      <li>Review Base Salary (from HR profile)</li>
+      <li>Add <strong>Allowances</strong> (e.g. Transport, Performance Bonus) with custom labels and amounts</li>
+      <li>Enter <strong>Deductions</strong> (e.g. Late Fine)</li>
+      <li><strong>Net Pay</strong> = Base + Allowances − Deductions (auto-calculated)</li>
+      <li>Add any Notes</li>
+    </ul>
+  </li>
+  <li>Click <strong>Save Changes</strong></li>
+  <li>When ready to pay, click <strong>Pay</strong> on each record OR click <strong>Pay All</strong> to mark all processed records as paid at once</li>
+</ol>
+
+<h4 class="label">Payroll Status Flow</h4>
+<table>
+  <tr><th>Status</th><th>Meaning</th></tr>
+  <tr><td><span class="badge-gray">Draft</span></td><td>Just generated — amounts not finalized</td></tr>
+  <tr><td><span class="badge-blue">Processed</span></td><td>Amounts finalized, ready to pay</td></tr>
+  <tr><td><span class="badge-green">Paid</span></td><td>Payment recorded — locked from editing</td></tr>
+</table>
+
+
+<!-- ═══════════ 11. REPORTS & ANALYTICS ═══════════ -->
+<h2 class="section">11 · Reports &amp; Analytics</h2>
+<span class="role role-admin">Super Admin</span> <span class="role role-manager">Manager</span> <span class="role role-cashier">Cashier (read)</span>
+
+<h3 class="sub">Reports Page — Five Tabs</h3>
+<table>
+  <tr><th>Tab</th><th>Key Metrics</th><th>Charts</th></tr>
+  <tr><td>Overview</td><td>Total / Sales / Rental / Fines Revenue</td><td>Revenue Over Time (line)</td></tr>
+  <tr><td>Sales</td><td>Total Sales, Revenue, Avg Sale, Items Sold</td><td>Top Products (bar), Payment Methods (pie)</td></tr>
+  <tr><td>Rentals</td><td>Bookings, Revenue, Avg Days, Completion %</td><td>Rentals by Status (bar), Top Products (list)</td></tr>
+  <tr><td>Inventory</td><td>SKUs, Stock, Rented Out, Damaged</td><td>Stock by Category (bar), Low Stock list</td></tr>
+  <tr><td>Fines</td><td>Issued, Total Amount, Collected</td><td>Top Late Returners (list)</td></tr>
+</table>
+
+<p>Each tab has a <strong>Download PDF</strong> button (top-right of the page) that generates a formatted PDF with the shop logo, stats, charts, and data tables.</p>
+
+<h3 class="sub">Analytics Page — P&amp;L Dashboard</h3>
+<p>The Analytics page tracks <strong>Profit &amp; Loss</strong> over time. It shows revenue vs expenses, cumulative profit trend, and expense breakdown by category. You can add business expenses manually (stock purchases, rent, salaries, etc.) and they feed into the P&amp;L charts.</p>
+
+<h4 class="label">Adding a Business Expense</h4>
+<ol class="steps">
+  <li>Go to <strong>Analytics</strong> → scroll to <strong>Business Expenses</strong></li>
+  <li>Click <strong>+ Add Expense</strong></li>
+  <li>Enter Amount, Category, optional Note, and Date</li>
+  <li>Click <strong>Save Expense</strong></li>
+</ol>
+
+
+<!-- ═══════════ 12. NOTIFICATIONS ═══════════ -->
+<h2 class="section">12 · Notifications</h2>
+<span class="role role-admin">Super Admin</span> <span class="role role-manager">Manager</span> <span class="role role-cashier">Cashier</span>
+
+<p>All automated notifications (booking confirmations, pickup reminders, return reminders, late warnings) are logged here. You can also send manual messages.</p>
+
+<h3 class="sub">Sending a Manual Notification</h3>
+<ol class="steps">
+  <li>Go to <strong>Notifications</strong> → click <strong>Send Notification</strong></li>
+  <li>Search and select the <strong>Customer</strong></li>
+  <li>Choose the <strong>Channel</strong> (SMS, WhatsApp, Email)</li>
+  <li>Select the <strong>Notification Type</strong> (e.g. Return Reminder)</li>
+  <li>Write or edit the <strong>Message</strong></li>
+  <li>Click <strong>Send</strong></li>
+</ol>
+<div class="tip"><strong>SMS/WhatsApp Setup</strong> Configure FitSMS API Token and Sender ID in <strong>Settings → Notifications</strong> to enable sending.</div>
+
+
+<!-- ═══════════ 13. SETTINGS ═══════════ -->
+<h2 class="section">13 · Settings</h2>
+<span class="role role-admin">Super Admin only</span>
+
+<div class="warn"><strong>Admin Only</strong> Only Super Admin accounts can access the Settings page.</div>
+
+<h3 class="sub">Tab 1 — Shop Info</h3>
+<p>Configure the basic shop details used across the system:</p>
+<table>
+  <tr><th>Field</th><th>Used In</th></tr>
+  <tr><td>Shop Name</td><td>PDF reports, receipts, notifications</td></tr>
+  <tr><td>Phone / Email / Address</td><td>Receipts and notifications</td></tr>
+  <tr><td>Currency</td><td>All price displays (LKR, USD, EUR, SGD)</td></tr>
+  <tr><td>Receipt Footer</td><td>Printed receipts footer message</td></tr>
+</table>
+
+<h3 class="sub">Tab 2 — Rental Rules</h3>
+<table>
+  <tr><th>Setting</th><th>Description</th></tr>
+  <tr><td>Min / Max Rental Days</td><td>Enforce booking duration limits</td></tr>
+  <tr><td>Default Advance %</td><td>Suggested advance payment percentage</td></tr>
+  <tr><td>Booking Number Prefix</td><td>Prefix for booking numbers (e.g. BK, TRL)</td></tr>
+</table>
+
+<h3 class="sub">Tab 3 — Fine Rules</h3>
+<table>
+  <tr><th>Setting</th><th>Description</th></tr>
+  <tr><td>Grace Period (days)</td><td>Days after due date before fines start</td></tr>
+  <tr><td>Fine Per Day (LKR)</td><td>Daily late fee amount</td></tr>
+  <tr><td>Max Fine Cap (LKR)</td><td>Maximum fine regardless of days late</td></tr>
+  <tr><td>Damage Charge Type</td><td>None / Flat Amount / % of Rental Cost</td></tr>
+  <tr><td>Flat Damage Charge</td><td>Fixed LKR amount per damaged item</td></tr>
+  <tr><td>Damage Charge %</td><td>Percentage of the item's rental cost</td></tr>
+</table>
+
+<h3 class="sub">Tab 4 — Notifications</h3>
+<p>Toggle which notification channels are active (SMS / WhatsApp / Email) and which automated events trigger messages (Booking Confirmed, Pickup Reminder, Return Reminder, Late Warning). Configure your FitSMS API credentials here.</p>
+
+<h3 class="sub">Tab 5 — Users</h3>
+<ol class="steps">
+  <li>Click <strong>+ Add User</strong> to create a new account</li>
+  <li>Fill in Name, Email, Phone, Role, and initial Password</li>
+  <li>To edit an existing user, click the <strong>Edit</strong> (pencil) icon</li>
+  <li>To reset a password, click the <strong>Key</strong> icon next to the user</li>
+  <li>To deactivate a user, toggle the <strong>Active</strong> switch</li>
+</ol>
+
+<h3 class="sub">Tab 6 — Permissions</h3>
+<p>The permissions matrix controls exactly which modules each role can access.</p>
+
+<div class="mockup">
+  <div class="mockup-bar">🔒 Permissions Matrix</div>
+  <div class="mockup-body" style="overflow-x:auto">
+    <table style="font-size:11px;min-width:500px">
+      <tr><th>Module</th><th>Manager</th><th>Cashier</th><th>Inventory Staff</th></tr>
+      <tr><td>Dashboard</td><td>✓ R &nbsp; ✓ W</td><td>✓ R &nbsp; ✓ W</td><td>✓ R &nbsp; – W</td></tr>
+      <tr><td>POS</td><td>✓ R &nbsp; ✓ W</td><td>✓ R &nbsp; ✓ W</td><td>– R &nbsp; – W</td></tr>
+      <tr><td>Rentals</td><td>✓ R &nbsp; ✓ W</td><td>✓ R &nbsp; ✓ W</td><td>– R &nbsp; – W</td></tr>
+      <tr><td>Inventory</td><td>✓ R &nbsp; ✓ W</td><td>– R &nbsp; – W</td><td>✓ R &nbsp; ✓ W</td></tr>
+      <tr><td>Reports</td><td>✓ R &nbsp; – W</td><td>✓ R &nbsp; – W</td><td>– R &nbsp; – W</td></tr>
+    </table>
+    <p style="font-size:10px;margin-top:6px;color:var(--gray)">R = Read access &nbsp;·&nbsp; W = Write access &nbsp;·&nbsp; Super Admin always has full access.</p>
+  </div>
+</div>
+
+<ol class="steps">
+  <li>Check/uncheck <strong>Read</strong> to allow/deny module visibility</li>
+  <li>Check/uncheck <strong>Write</strong> to allow/deny create &amp; edit actions</li>
+  <li>Write requires Read — unchecking Read auto-unchecks Write</li>
+  <li>Click <strong>Save Permissions</strong> — changes take effect on next page load</li>
+</ol>
+
+
+<!-- ═══════════ 14. PERMISSIONS MATRIX ═══════════ -->
+<h2 class="section">14 · Full Permissions Matrix</h2>
+
+<table>
+  <tr><th>Module</th><th>Super Admin</th><th>Manager</th><th>Cashier</th><th>Inventory Staff</th></tr>
+  <tr><td>Dashboard</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+  <tr><td>POS</td><td>✓</td><td>✓</td><td>✓</td><td>✗</td></tr>
+  <tr><td>Rentals</td><td>✓</td><td>✓</td><td>✓</td><td>✗</td></tr>
+  <tr><td>Returns</td><td>✓</td><td>✓</td><td>✓</td><td>✗</td></tr>
+  <tr><td>Products</td><td>✓</td><td>✓</td><td>Read only</td><td>✓</td></tr>
+  <tr><td>Customers</td><td>✓</td><td>✓</td><td>✓</td><td>Read only</td></tr>
+  <tr><td>Inventory</td><td>✓</td><td>✓</td><td>✗</td><td>✓</td></tr>
+  <tr><td>Employees</td><td>✓</td><td>✓ (full)</td><td>Own leaves only</td><td>Own leaves only</td></tr>
+  <tr><td>Payroll</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td></tr>
+  <tr><td>Reports</td><td>✓</td><td>✓</td><td>✓</td><td>✗</td></tr>
+  <tr><td>Analytics</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td></tr>
+  <tr><td>Notifications</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+  <tr><td>Settings</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td></tr>
+</table>
+<p style="font-size:11px;color:var(--gray);margin-top:4px">Default permissions — customizable per role in Settings → Permissions.</p>
+
+
+<!-- ═══════════ 15. QUICK REFERENCE ═══════════ -->
+<h2 class="section">15 · Quick Reference &amp; Troubleshooting</h2>
+
+<h3 class="sub">Common Tasks at a Glance</h3>
+<table>
+  <tr><th>Task</th><th>Path</th></tr>
+  <tr><td>Process a sale</td><td>POS → search/scan → cart → checkout</td></tr>
+  <tr><td>Create a rental booking</td><td>Rentals → + New Rental</td></tr>
+  <tr><td>Return rented items</td><td>Returns → Process Return</td></tr>
+  <tr><td>Add stock received</td><td>Inventory → Adjust → Stock In</td></tr>
+  <tr><td>Reset user password</td><td>Settings → Users → key icon</td></tr>
+  <tr><td>Download a report as PDF</td><td>Reports (any tab) → Download PDF button</td></tr>
+  <tr><td>Add a business expense</td><td>Analytics → Add Expense</td></tr>
+  <tr><td>Approve a leave request</td><td>Employees → Leaves tab → Approve button</td></tr>
+  <tr><td>Generate monthly payroll</td><td>Payroll → select month → Generate Payroll</td></tr>
+  <tr><td>Print product barcode labels</td><td>Products → click product → Variants → 🖨 Barcode</td></tr>
+</table>
+
+<h3 class="sub">Troubleshooting</h3>
+<table>
+  <tr><th>Problem</th><th>Solution</th></tr>
+  <tr><td>Can't see a menu item</td><td>Check Settings → Permissions — ask Super Admin to grant access</td></tr>
+  <tr><td>POS sale fails (insufficient stock)</td><td>Check Inventory — For Sale column may be 0. Adjust available_for_rent or add stock.</td></tr>
+  <tr><td>Barcode not scanning</td><td>Check product variant has a barcode assigned. Try typing the SKU manually.</td></tr>
+  <tr><td>Notifications not sending</td><td>Check Settings → Notifications — ensure API Token and Sender ID are configured</td></tr>
+  <tr><td>Fine calculation wrong</td><td>Review Settings → Fine Rules — check grace period and fine per day settings</td></tr>
+  <tr><td>Damage charge not applied</td><td>Check Settings → Fine Rules → Damage Charge Type is not "None"</td></tr>
+</table>
+
+<div class="info" style="margin-top:28px"><strong>Support</strong> For technical assistance, contact your system administrator or the development team.</div>
+
+<hr />
+<p style="text-align:center;color:var(--gray);font-size:11px">The Outfit Lounge POS &amp; Rental Management System &nbsp;·&nbsp; Administrator Manual v1.0 &nbsp;·&nbsp; May 2026</p>
+
+</div><!-- /page -->
+</body>
+</html>

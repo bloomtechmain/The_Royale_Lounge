@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Outfit Lounge – Staff User Guide</title>
+<style>
+  :root {
+    --gold: #b48c50;
+    --gold-light: #d4a96a;
+    --gold-pale: #f7f0e4;
+    --dark: #1a1a26;
+    --gray: #6b6b80;
+    --light: #f5f5f8;
+    --border: #e0ddd8;
+    --red: #dc2626;
+    --green: #16a34a;
+    --blue: #2563eb;
+    --amber: #d97706;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #222;
+    background: #fff;
+  }
+
+  /* ── Cover ─────────────────────────────── */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, #1a1a26 60%, #2e2218 100%);
+    color: #fff;
+    text-align: center;
+    padding: 40px;
+    page-break-after: always;
+  }
+  .cover img { width: 110px; height: 110px; object-fit: cover; border-radius: 20px; border: 3px solid var(--gold); margin-bottom: 28px; }
+  .cover h1 { font-size: 36px; font-weight: 800; color: var(--gold-light); letter-spacing: 1px; }
+  .cover h2 { font-size: 20px; font-weight: 400; color: #ccc; margin-top: 6px; }
+  .cover .badge { display: inline-block; margin-top: 24px; padding: 6px 20px; border: 1px solid var(--gold); border-radius: 99px; font-size: 11px; color: var(--gold-light); letter-spacing: 2px; text-transform: uppercase; }
+  .cover .meta { margin-top: 40px; font-size: 12px; color: #888; }
+  .cover .roles { display: flex; gap: 12px; margin-top: 20px; justify-content: center; flex-wrap: wrap; }
+  .cover .role-pill { padding: 6px 16px; border-radius: 99px; font-size: 12px; font-weight: 600; }
+
+  /* ── Layout ─────────────────────────────── */
+  .page { max-width: 800px; margin: 0 auto; padding: 40px 48px; }
+
+  /* ── TOC ─────────────────────────────── */
+  .toc { page-break-after: always; }
+  .toc h2 { font-size: 22px; color: var(--gold); border-bottom: 2px solid var(--gold); padding-bottom: 8px; margin-bottom: 20px; }
+  .toc ol { padding-left: 20px; }
+  .toc li { padding: 5px 0; color: #444; font-size: 13px; }
+
+  /* ── Section Headings ─────────────────── */
+  h2.section {
+    font-size: 20px;
+    color: #fff;
+    background: linear-gradient(90deg, var(--dark) 0%, #2a2a3a 100%);
+    padding: 12px 18px;
+    border-left: 5px solid var(--gold);
+    border-radius: 6px;
+    margin: 36px 0 20px;
+  }
+  h3.sub { font-size: 15px; color: var(--dark); border-left: 3px solid var(--gold-light); padding-left: 10px; margin: 24px 0 12px; }
+  h4.label { font-size: 13px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; margin: 16px 0 6px; }
+
+  /* ── Role badge at section top ─────────── */
+  .for-role { display: inline-block; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .for-cashier  { background: #dbeafe; color: #1e40af; }
+  .for-staff    { background: #d1fae5; color: #065f46; }
+  .for-all      { background: #f3f4f6; color: #374151; }
+
+  /* ── Callouts ─────────────────────────── */
+  .tip   { background: #ecfdf5; border-left: 4px solid var(--green); padding: 10px 14px; border-radius: 4px; margin: 12px 0; font-size: 12px; }
+  .warn  { background: #fffbeb; border-left: 4px solid var(--amber); padding: 10px 14px; border-radius: 4px; margin: 12px 0; font-size: 12px; }
+  .info  { background: #eff6ff; border-left: 4px solid var(--blue);  padding: 10px 14px; border-radius: 4px; margin: 12px 0; font-size: 12px; }
+  .tip strong, .warn strong, .info strong { display: block; margin-bottom: 3px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* ── Steps ────────────────────────────── */
+  .steps { counter-reset: step; padding-left: 0; list-style: none; }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: var(--light);
+    border-radius: 8px;
+  }
+  .steps li::before {
+    content: counter(step);
+    min-width: 24px;
+    height: 24px;
+    background: var(--gold);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .steps li .note { font-size: 11px; color: var(--gray); margin-top: 3px; }
+
+  /* ── Tables ───────────────────────────── */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+  th { background: var(--dark); color: var(--gold-light); padding: 8px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 7px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: var(--light); }
+
+  /* ── Mock UI ──────────────────────────── */
+  .mockup { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 14px 0; font-size: 12px; }
+  .mockup-bar { background: var(--dark); color: var(--gold-light); padding: 7px 14px; font-size: 11px; font-weight: 600; }
+  .mockup-body { background: #f9f9fb; padding: 14px; }
+  .mock-card { display: inline-block; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; margin: 4px; min-width: 110px; text-align: center; }
+  .mock-card .val { font-size: 18px; font-weight: 700; color: var(--gold); }
+  .mock-card .lbl { font-size: 10px; color: var(--gray); }
+  .mock-row { display: flex; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
+  .mock-btn { padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .mock-btn-gold { background: var(--gold); color: #fff; }
+  .mock-btn-outline { background: #fff; border: 1px solid var(--border); color: #444; }
+  .mock-input { border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 11px; color: #666; background: #fff; min-width: 140px; }
+  .mock-table-head { background: var(--dark); color: var(--gold-light); padding: 6px 10px; font-size: 10px; border-radius: 4px 4px 0 0; }
+  .mock-table-row { background: #fff; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 11px; display: flex; justify-content: space-between; align-items: center; }
+  .badge-green { background: #d1fae5; color: #065f46; padding: 2px 7px; border-radius: 99px; font-size: 10px; }
+  .badge-amber { background: #fef3c7; color: #92400e; padding: 2px 7px; border-radius: 99px; font-size: 10px; }
+  .badge-red   { background: #fee2e2; color: #991b1b; padding: 2px 7px; border-radius: 99px; font-size: 10px; }
+  .badge-blue  { background: #dbeafe; color: #1e40af; padding: 2px 7px; border-radius: 99px; font-size: 10px; }
+  .badge-gray  { background: #f3f4f6; color: #374151; padding: 2px 7px; border-radius: 99px; font-size: 10px; }
+  .tile { display: inline-flex; flex-direction: column; align-items: center; border: 2px solid var(--border); border-radius: 10px; padding: 10px 18px; margin: 4px; font-size: 12px; font-weight: 600; min-width: 80px; }
+  .tile-green  { border-color: #16a34a; background: #f0fdf4; color: #15803d; }
+  .tile-amber  { border-color: #d97706; background: #fffbeb; color: #b45309; }
+  .tile-red    { border-color: #dc2626; background: #fef2f2; color: #b91c1c; }
+
+  /* ── Divider ──────────────────────────── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+
+  /* ── Big number callout ─────────────────── */
+  .big-step { display: flex; align-items: center; gap: 16px; padding: 14px 18px; background: var(--gold-pale); border-radius: 10px; margin: 10px 0; }
+  .big-step .num { font-size: 28px; font-weight: 900; color: var(--gold); min-width: 36px; }
+  .big-step .content strong { display: block; font-size: 13px; }
+  .big-step .content span { font-size: 12px; color: var(--gray); }
+
+  /* ── Print ───────────────────────────── */
+  @media print {
+    .cover { min-height: 100vh; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    h2.section { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .mockup-bar, th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .tip, .warn, .info { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .steps li::before { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .tile-green, .tile-amber, .tile-red { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { padding: 24px 36px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ COVER ═══════════════════ -->
+<div class="cover">
+  <img src="/logo.jpg" alt="Logo" onerror="this.style.display='none'" />
+  <h1>The Outfit Lounge</h1>
+  <h2>Staff User Guide</h2>
+  <div class="badge">POS &amp; Rental Management System</div>
+  <div class="roles">
+    <span class="role-pill" style="background:#dbeafe;color:#1e40af">Cashier</span>
+    <span class="role-pill" style="background:#d1fae5;color:#065f46">Inventory Staff</span>
+    <span class="role-pill" style="background:#fef3c7;color:#92400e">Manager</span>
+  </div>
+  <div class="meta">Version 1.0 &nbsp;·&nbsp; May 2026</div>
+</div>
+
+<!-- ═══════════════════ PAGE WRAPPER ═══════════════════ -->
+<div class="page">
+
+<!-- ─── TABLE OF CONTENTS ─── -->
+<div class="toc">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li>Logging In</li>
+    <li>Your Dashboard</li>
+    <li>Making a Sale (POS)</li>
+    <li>Rental Bookings</li>
+    <li>Processing Returns</li>
+    <li>Products &amp; Inventory</li>
+    <li>Customer Records</li>
+    <li>Leave Requests</li>
+    <li>Notifications</li>
+    <li>Reports</li>
+    <li>Quick Reference Card</li>
+  </ol>
+</div>
+
+
+<!-- ═══════════ 1. LOGIN ═══════════ -->
+<h2 class="section">1 · Logging In</h2>
+<span class="for-role for-all">All Staff</span>
+
+<div class="mockup">
+  <div class="mockup-bar">🔐 The Outfit Lounge — Sign In</div>
+  <div class="mockup-body">
+    <div style="max-width:280px;margin:auto;padding:20px 0;text-align:center">
+      <div style="font-size:14px;font-weight:700;margin-bottom:14px;color:var(--dark)">Welcome back</div>
+      <div class="mock-input" style="display:block;margin:8px 0;text-align:left">📧 &nbsp;your.email@outfitlounge.com</div>
+      <div class="mock-input" style="display:block;margin:8px 0;text-align:left">🔒 &nbsp;Password</div>
+      <div class="mock-btn mock-btn-gold" style="display:block;margin-top:14px;text-align:center;padding:9px">Sign In →</div>
+    </div>
+  </div>
+</div>
+
+<ol class="steps">
+  <li>Open the app URL in your browser (ask your manager for the link)</li>
+  <li>Type your <strong>email address</strong> and <strong>password</strong></li>
+  <li>Click <strong>Sign In</strong> — you land on the Dashboard</li>
+</ol>
+
+<div class="warn"><strong>Forgot Your Password?</strong> Ask your Manager or Admin to reset it for you from Settings → Users.</div>
+<div class="tip"><strong>Tip</strong> Bookmark the app URL on your device for quick access. The app works on phones and tablets too.</div>
+
+
+<!-- ═══════════ 2. DASHBOARD ═══════════ -->
+<h2 class="section">2 · Your Dashboard</h2>
+<span class="for-role for-all">All Staff</span>
+
+<div class="mockup">
+  <div class="mockup-bar">🏠 Dashboard</div>
+  <div class="mockup-body">
+    <div class="mock-row">
+      <div class="mock-card"><div class="val">LKR 48,500</div><div class="lbl">Today's Revenue</div></div>
+      <div class="mock-card"><div class="val">12</div><div class="lbl">Active Rentals</div></div>
+      <div class="mock-card"><div class="val" style="color:var(--amber)">5</div><div class="lbl">Pending Returns</div></div>
+      <div class="mock-card"><div class="val" style="color:var(--red)">3 ⚠</div><div class="lbl">Low Stock</div></div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <span class="mock-btn mock-btn-gold">+ New Sale</span>
+      <span class="mock-btn mock-btn-gold">+ New Rental</span>
+      <span class="mock-btn mock-btn-outline">Process Return</span>
+      <span class="mock-btn mock-btn-outline">+ Customer</span>
+    </div>
+  </div>
+</div>
+
+<p>The Dashboard gives you a quick snapshot when you start your shift. You'll see:</p>
+<ul style="padding-left:20px;margin:8px 0;line-height:2">
+  <li><strong>Today's Revenue</strong> — total sales + rental payments collected today</li>
+  <li><strong>Active Rentals</strong> — how many items are currently with customers</li>
+  <li><strong>Pending Returns</strong> — rentals due back (red = overdue!)</li>
+  <li><strong>Low Stock</strong> — products running low (≤ 3 units)</li>
+</ul>
+<p>Use the <strong>Quick Action buttons</strong> to jump straight to New Sale, New Rental, or Process Return.</p>
+
+
+<!-- ═══════════ 3. POS ═══════════ -->
+<h2 class="section">3 · Making a Sale (POS)</h2>
+<span class="for-role for-cashier">Cashier</span> &nbsp; <span class="for-role for-all">Manager</span>
+
+<p>Use the <strong>POS</strong> page to sell products to customers at the counter.</p>
+
+<div class="mockup">
+  <div class="mockup-bar">🛒 Point of Sale</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:10px">
+      <div style="flex:2">
+        <div class="mock-row">
+          <div class="mock-input" style="flex:1">🔍 Search or scan barcode...</div>
+        </div>
+        <div class="mock-row" style="margin-top:8px">
+          <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px;width:95px;text-align:center;font-size:11px">
+            <div style="height:40px;background:var(--light);border-radius:4px;margin-bottom:6px"></div>
+            <div style="font-weight:600">Blazer</div>
+            <div style="color:var(--gold);font-size:10px">LKR 3,500</div>
+          </div>
+          <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px;width:95px;text-align:center;font-size:11px">
+            <div style="height:40px;background:var(--light);border-radius:4px;margin-bottom:6px"></div>
+            <div style="font-weight:600">Kurta</div>
+            <div style="color:var(--gold);font-size:10px">LKR 800</div>
+          </div>
+          <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px;width:95px;text-align:center;font-size:11px">
+            <div style="height:40px;background:var(--light);border-radius:4px;margin-bottom:6px"></div>
+            <div style="font-weight:600">Saree</div>
+            <div style="color:var(--gold);font-size:10px">LKR 5,200</div>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px">
+        <div style="font-weight:700;margin-bottom:6px">🛒 Cart</div>
+        <div style="padding:5px 0;border-bottom:1px solid var(--border)">Kurta M Red &nbsp; × &nbsp; <strong>1</strong></div>
+        <div style="padding:5px 0;border-bottom:1px solid var(--border)">Blazer L Black &nbsp; × &nbsp; <strong>1</strong></div>
+        <div style="padding:8px 0;font-weight:700">Total: LKR 4,300</div>
+        <div class="mock-btn mock-btn-gold" style="display:block;text-align:center;margin-top:6px;padding:7px">Checkout →</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 class="sub">Step-by-Step: Selling Products</h3>
+
+<div class="big-step">
+  <div class="num">1</div>
+  <div class="content"><strong>Find the Product</strong><span>Type the name in the search box or scan the product barcode. Products appear as cards below.</span></div>
+</div>
+<div class="big-step">
+  <div class="num">2</div>
+  <div class="content"><strong>Select Variant (if needed)</strong><span>If a product comes in different sizes/colours, a picker will pop up. Choose the right size and colour, then click Add.</span></div>
+</div>
+<div class="big-step">
+  <div class="num">3</div>
+  <div class="content"><strong>Adjust Cart</strong><span>Use + / − to change quantities. Click the discount icon on an item to apply a per-item discount. Use the cart discount field for overall discounts.</span></div>
+</div>
+<div class="big-step">
+  <div class="num">4</div>
+  <div class="content"><strong>Attach Customer (Optional)</strong><span>Search for the customer in the cart panel. This tracks their purchase history.</span></div>
+</div>
+<div class="big-step">
+  <div class="num">5</div>
+  <div class="content"><strong>Checkout</strong><span>Click Checkout. Choose payment method, enter the amount received, and click Complete Sale. A receipt appears — print it if needed.</span></div>
+</div>
+
+<h3 class="sub">Payment Methods</h3>
+<table>
+  <tr><th>Method</th><th>When to Use</th></tr>
+  <tr><td>💵 Cash</td><td>Customer pays in cash — enter exact amount received, change is calculated</td></tr>
+  <tr><td>💳 Card</td><td>Debit or credit card payment</td></tr>
+  <tr><td>📱 Mobile Payment</td><td>Mobile banking transfer (e.g. FriMi)</td></tr>
+  <tr><td>🏦 Bank Transfer</td><td>Direct bank transfer</td></tr>
+</table>
+
+<div class="warn"><strong>Stock Error?</strong> If a sale fails with "Insufficient sale stock", the item is fully reserved for rentals. Tell your manager — they can adjust the stock allocation in Inventory.</div>
+
+
+<!-- ═══════════ 4. RENTALS ═══════════ -->
+<h2 class="section">4 · Rental Bookings</h2>
+<span class="for-role for-cashier">Cashier</span> &nbsp; <span class="for-role for-all">Manager</span>
+
+<h3 class="sub">Creating a New Rental Booking</h3>
+
+<div class="big-step">
+  <div class="num">1</div>
+  <div class="content"><strong>Go to Rentals → + New Rental</strong></div>
+</div>
+<div class="big-step">
+  <div class="num">2</div>
+  <div class="content"><strong>Search and Select the Customer</strong><span>Type their name or phone number. If they're new, create them first in Customers.</span></div>
+</div>
+<div class="big-step">
+  <div class="num">3</div>
+  <div class="content"><strong>Set the Rental Period</strong><span>Choose Start Date (pickup date) and End Date (return date). The number of days is calculated automatically.</span></div>
+</div>
+<div class="big-step">
+  <div class="num">4</div>
+  <div class="content"><strong>Add Items</strong><span>Click + Add Item, search for the product, pick the variant and quantity. Repeat for multiple items.</span></div>
+</div>
+<div class="big-step">
+  <div class="num">5</div>
+  <div class="content"><strong>Set Advance Payment</strong><span>Enter how much the customer is paying now. Select the payment method.</span></div>
+</div>
+<div class="big-step">
+  <div class="num">6</div>
+  <div class="content"><strong>Save the Booking</strong><span>Click Create Booking. A booking number is generated (e.g. BK-0042) and a confirmation message is sent to the customer.</span></div>
+</div>
+
+<h3 class="sub">Updating Rental Status</h3>
+
+<p>When a customer picks up their items, you need to update the rental status:</p>
+<ol class="steps">
+  <li>Go to <strong>Rentals</strong>, find the booking (search by name or booking number)</li>
+  <li>Click the booking to open the detail view</li>
+  <li>Click <strong>Update Status</strong> and select the new status</li>
+</ol>
+
+<table>
+  <tr><th>What's Happening</th><th>Status to Set</th></tr>
+  <tr><td>Items are ready but customer hasn't come yet</td><td><span class="badge-blue">Ready for Pickup</span></td></tr>
+  <tr><td>Customer has collected the items</td><td><span class="badge-amber">Picked Up</span></td></tr>
+  <tr><td>Customer returned items, all paid</td><td><span class="badge-green">Completed</span></td></tr>
+  <tr><td>Booking is no longer needed</td><td><span class="badge-gray">Cancelled</span></td></tr>
+</table>
+
+<div class="tip"><strong>Kanban View</strong> Click the board icon in the top-right of the Rentals page to switch to Kanban view — it shows all bookings as cards grouped by status. Great for a quick visual overview.</div>
+
+
+<!-- ═══════════ 5. RETURNS ═══════════ -->
+<h2 class="section">5 · Processing Returns</h2>
+<span class="for-role for-cashier">Cashier</span> &nbsp; <span class="for-role for-all">Manager</span>
+
+<p>When customers bring back rented items, process the return through the <strong>Returns</strong> page.</p>
+
+<div class="mockup">
+  <div class="mockup-bar">↩ Returns — Pending</div>
+  <div class="mockup-body">
+    <div class="mock-row" style="margin-bottom:10px">
+      <div class="mock-card"><div class="val" style="color:var(--amber)">4</div><div class="lbl">Due Today</div></div>
+      <div class="mock-card"><div class="val" style="color:var(--red)">2</div><div class="lbl">Overdue</div></div>
+      <div class="mock-card"><div class="val">11</div><div class="lbl">Total Pending</div></div>
+    </div>
+    <div class="mock-table-head">Customer &nbsp;·&nbsp; Items &nbsp;·&nbsp; Due Date &nbsp;·&nbsp; Status &nbsp;·&nbsp; Action</div>
+    <div class="mock-table-row">
+      <span>Nimal S. · 2 items · Jun 10</span>
+      <span><span class="badge-red">2 days late</span> &nbsp; <span class="mock-btn mock-btn-gold" style="font-size:10px">Process</span></span>
+    </div>
+    <div class="mock-table-row" style="border:none">
+      <span>Seetha K. · 1 item · Jun 12</span>
+      <span><span class="badge-amber">Due today</span> &nbsp; <span class="mock-btn mock-btn-gold" style="font-size:10px">Process</span></span>
+    </div>
+  </div>
+</div>
+
+<h3 class="sub">Step-by-Step: Processing a Return</h3>
+
+<div class="big-step">
+  <div class="num">1</div>
+  <div class="content"><strong>Find the Rental</strong><span>Go to Returns. Find the customer's booking — overdue ones show in red at the top.</span></div>
+</div>
+<div class="big-step">
+  <div class="num">2</div>
+  <div class="content"><strong>Click Process Return</strong><span>A form opens showing all items in the rental.</span></div>
+</div>
+<div class="big-step">
+  <div class="num">3</div>
+  <div class="content"><strong>Set the Return Date</strong><span>Defaults to today. Change only if the customer actually returned on a different date.</span></div>
+</div>
+<div class="big-step">
+  <div class="num">4</div>
+  <div class="content"><strong>Check Each Item's Condition</strong><span>For every item, click one of the three condition tiles:</span></div>
+</div>
+
+<div style="margin:12px 0;padding:12px;background:var(--light);border-radius:10px">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+    <div class="tile tile-green">✓ Good<div style="font-size:10px;font-weight:400">No extra charge</div></div>
+    <div class="tile tile-amber">⚠ Damaged<div style="font-size:10px;font-weight:400">Charge auto-added</div></div>
+    <div class="tile tile-red">✕ Lost<div style="font-size:10px;font-weight:400">Full price charged</div></div>
+  </div>
+  <ul style="padding-left:18px;font-size:12px;line-height:2">
+    <li><strong>Good</strong> — Item is returned in acceptable condition. No extra charge.</li>
+    <li><strong>Damaged</strong> — Item has visible damage. A damage fee is calculated automatically based on shop rules. The amount is shown as a read-only badge.</li>
+    <li><strong>Lost</strong> — Item was not returned. If it's a sale item, its selling price is charged. For rental-only items, you can enter a custom charge amount.</li>
+  </ul>
+</div>
+
+<div class="big-step">
+  <div class="num">5</div>
+  <div class="content"><strong>Review the Charges Summary</strong><span>At the bottom you'll see: Late fine (if overdue) + Damage/Loss charges + Total to collect.</span></div>
+</div>
+<div class="big-step">
+  <div class="num">6</div>
+  <div class="content"><strong>Select Payment Method and Confirm</strong><span>Choose how the customer is paying the charges. Click Process Return to complete.</span></div>
+</div>
+
+<div class="info"><strong>No Charges?</strong> If all items are Good and the return is on time, the charges summary will show LKR 0. Just confirm the return.</div>
+<div class="warn"><strong>Late Fine</strong> The system calculates the late fine automatically based on how many days past the due date (minus the grace period set by your manager). You cannot override this from the Returns page — ask your manager if a fine needs to be waived.</div>
+
+
+<!-- ═══════════ 6. PRODUCTS & INVENTORY ═══════════ -->
+<h2 class="section">6 · Products &amp; Inventory</h2>
+<span class="for-role for-staff">Inventory Staff</span> &nbsp; <span class="for-role for-cashier">Cashier (view only)</span>
+
+<h3 class="sub">Browsing Products</h3>
+<p>Go to <strong>Products</strong> to see the full catalog. You can search by name, SKU, or barcode, and filter by category or type (Rental / Sale / Both). Click on any product to see its full details, variants, and stock levels.</p>
+
+<h3 class="sub">Recording Stock Movements (Inventory Staff)</h3>
+
+<div class="mockup">
+  <div class="mockup-bar">📦 Inventory — Adjust Stock</div>
+  <div class="mockup-body">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="flex:2">
+        <div class="mock-table-head">Product · SKU · Total · For Sale · For Rent · Damaged</div>
+        <div class="mock-table-row">
+          <span>Blazer M Black · BLZ-M-BLK</span>
+          <span>8 &nbsp; <span style="color:var(--green)">3</span> &nbsp; <span style="color:#2563eb">5</span> &nbsp; 0 &nbsp; <span class="mock-btn mock-btn-outline" style="font-size:10px">Adjust</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ol class="steps">
+  <li>Go to <strong>Inventory</strong></li>
+  <li>Find the product variant you need to update (use the search box)</li>
+  <li>Click the <strong>Adjust</strong> button on that row</li>
+  <li>Select the <strong>Movement Type</strong>:
+    <ul style="padding-left:14px;margin-top:4px;font-size:12px;line-height:2">
+      <li><strong>Stock In</strong> — New stock arrived from supplier</li>
+      <li><strong>Stock Out</strong> — Items removed (disposal, write-off)</li>
+      <li><strong>Adjustment</strong> — Correcting count after physical stocktake</li>
+      <li><strong>Mark Damaged</strong> — Recording items found damaged in store</li>
+    </ul>
+  </li>
+  <li>Enter the <strong>Quantity</strong> and a brief <strong>Reason</strong></li>
+  <li>Click <strong>Record Movement</strong></li>
+</ol>
+
+<div class="tip"><strong>Stock Columns Explained</strong><br>
+  <strong style="color:var(--green)">For Sale</strong> = items you can sell at the counter<br>
+  <strong style="color:#2563eb">For Rent</strong> = items reserved for rental customers<br>
+  <strong>Total</strong> = all physical items in the shop
+</div>
+
+<h3 class="sub">Printing Barcode Labels</h3>
+<ol class="steps">
+  <li>Go to <strong>Products</strong> → click on a product</li>
+  <li>In the Variants table, find the variant you need</li>
+  <li>Click the <strong>🖨 Barcode</strong> button in that row</li>
+  <li>A preview shows the barcode and product details</li>
+  <li>Set the number of copies (e.g. print 10 labels for new stock)</li>
+  <li>Click <strong>Print</strong> — your browser's print dialog will open</li>
+</ol>
+
+
+<!-- ═══════════ 7. CUSTOMERS ═══════════ -->
+<h2 class="section">7 · Customer Records</h2>
+<span class="for-role for-cashier">Cashier</span> &nbsp; <span class="for-role for-all">Manager</span>
+
+<h3 class="sub">Adding a New Customer</h3>
+<ol class="steps">
+  <li>Go to <strong>Customers</strong> → click <strong>+ Add Customer</strong></li>
+  <li>Fill in: <strong>Full Name</strong> (required), Phone, Email, WhatsApp, Address</li>
+  <li>Add any Notes (e.g. "prefers traditional styles", "VIP customer")</li>
+  <li>Click <strong>Save Customer</strong></li>
+</ol>
+
+<div class="tip"><strong>WhatsApp</strong> If the customer has a different WhatsApp number than their main phone, fill in both. The system sends reminders to WhatsApp first.</div>
+
+<h3 class="sub">Finding a Customer</h3>
+<p>Use the search bar to find customers by name, phone number, or email. Click their name to see full details including rental history and any outstanding fines (shown in red).</p>
+
+<div class="warn"><strong>Outstanding Fines</strong> If a customer has an outstanding fine shown in red, remind them to settle it when they come to the counter for a new rental.</div>
+
+
+<!-- ═══════════ 8. LEAVE REQUESTS ═══════════ -->
+<h2 class="section">8 · Leave Requests</h2>
+<span class="for-role for-all">All Staff</span>
+
+<p>You can apply for leave and check your leave history from the <strong>Employees</strong> page.</p>
+
+<div class="mockup">
+  <div class="mockup-bar">👥 Employees — My Leaves</div>
+  <div class="mockup-body">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:600">My Leave Requests</div>
+      <span class="mock-btn mock-btn-gold" style="font-size:11px">+ Apply for Leave</span>
+    </div>
+    <div class="mock-table-head">Type · Dates · Days · Reason · Status</div>
+    <div class="mock-table-row"><span>Annual · Jun 20 – Jun 22 · 3 days · Family visit</span><span class="badge-green">Approved</span></div>
+    <div class="mock-table-row" style="border:none"><span>Sick · Jun 10 · 1 day · Not feeling well</span><span class="badge-amber">Pending</span></div>
+  </div>
+</div>
+
+<h3 class="sub">Applying for Leave</h3>
+<ol class="steps">
+  <li>Go to <strong>Employees</strong> → <strong>My Leaves</strong> tab</li>
+  <li>Click <strong>+ Apply for Leave</strong></li>
+  <li>Select <strong>Leave Type</strong>: Annual, Sick, Casual, or Unpaid</li>
+  <li>Choose <strong>Start Date</strong> and <strong>End Date</strong></li>
+  <li>The number of days is calculated automatically</li>
+  <li>Write a brief <strong>Reason</strong></li>
+  <li>Click <strong>Submit</strong> — your manager will be notified</li>
+</ol>
+
+<h3 class="sub">Leave Status Guide</h3>
+<table>
+  <tr><th>Status</th><th>Meaning</th><th>What to Do</th></tr>
+  <tr><td><span class="badge-amber">Pending</span></td><td>Submitted, awaiting manager decision</td><td>Wait for approval. You can cancel if plans change.</td></tr>
+  <tr><td><span class="badge-green">Approved</span></td><td>Manager has approved your leave</td><td>You're all set — the dates appear on the team calendar.</td></tr>
+  <tr><td><span class="badge-red">Rejected</span></td><td>Manager has declined your request</td><td>Check the review note for the reason. Apply for different dates if needed.</td></tr>
+</table>
+
+<h3 class="sub">Leave Calendar</h3>
+<p>Click the <strong>Calendar</strong> tab to see a monthly view of leave days. Your approved leaves show in green, pending leaves in amber. Use the arrow buttons to browse months.</p>
+
+
+<!-- ═══════════ 9. NOTIFICATIONS ═══════════ -->
+<h2 class="section">9 · Notifications</h2>
+<span class="for-role for-cashier">Cashier</span> &nbsp; <span class="for-role for-all">Manager</span>
+
+<p>The <strong>Notifications</strong> page shows all messages sent to customers (booking confirmations, reminders, etc.) and lets you send manual messages when needed.</p>
+
+<h3 class="sub">Sending a Manual Message</h3>
+<ol class="steps">
+  <li>Go to <strong>Notifications</strong> → click <strong>Send Notification</strong></li>
+  <li>Search for the <strong>customer</strong> by name or phone</li>
+  <li>Choose the <strong>channel</strong> — WhatsApp (recommended), SMS, or Email</li>
+  <li>Select the <strong>notification type</strong> (e.g. Return Reminder)</li>
+  <li>Edit the <strong>message text</strong> if needed</li>
+  <li>Click <strong>Send</strong></li>
+</ol>
+
+<div class="tip"><strong>Common Use Case</strong> Use this to send a friendly reminder to a customer whose rental is due tomorrow, or to confirm a pickup time.</div>
+
+
+<!-- ═══════════ 10. REPORTS ═══════════ -->
+<h2 class="section">10 · Reports</h2>
+<span class="for-role for-cashier">Cashier</span> &nbsp; <span class="for-role for-all">Manager</span>
+
+<p>Go to <strong>Reports</strong> in the sidebar to view business performance data. Five tabs are available:</p>
+
+<table>
+  <tr><th>Tab</th><th>What You'll See</th></tr>
+  <tr><td>Overview</td><td>Revenue chart and totals for the last 7/30/365 days</td></tr>
+  <tr><td>Sales</td><td>Total sales, top-selling products, payment methods</td></tr>
+  <tr><td>Rentals</td><td>Booking counts, revenue, top rented items</td></tr>
+  <tr><td>Inventory</td><td>Stock levels by category, low stock alerts</td></tr>
+  <tr><td>Fines</td><td>Late fines issued and collected, top late returners</td></tr>
+</table>
+
+<h3 class="sub">Downloading a PDF Report</h3>
+<ol class="steps">
+  <li>Go to <strong>Reports</strong> and click the tab you want (e.g. Sales)</li>
+  <li>Set the <strong>date range</strong> using the From/To date fields</li>
+  <li>Click the <strong>Download PDF</strong> button in the top-right</li>
+  <li>A PDF with charts and data tables will download automatically</li>
+</ol>
+
+<div class="tip"><strong>CSV Export</strong> Many report sections also have a small Export CSV button next to the chart title. Use this to open the data in Excel for further analysis.</div>
+
+
+<!-- ═══════════ 11. QUICK REFERENCE ═══════════ -->
+<h2 class="section">11 · Quick Reference Card</h2>
+
+<h3 class="sub">Daily Tasks Cheat Sheet</h3>
+<table>
+  <tr><th>Task</th><th>Where to Go</th><th>Quick Path</th></tr>
+  <tr><td>Sell a product</td><td>POS</td><td>Sidebar → POS → search → cart → checkout</td></tr>
+  <tr><td>Create a rental booking</td><td>Rentals</td><td>Sidebar → Rentals → + New Rental</td></tr>
+  <tr><td>Mark items as picked up</td><td>Rentals</td><td>Find booking → Update Status → Picked Up</td></tr>
+  <tr><td>Process a return</td><td>Returns</td><td>Sidebar → Returns → Process button</td></tr>
+  <tr><td>Add a new customer</td><td>Customers</td><td>Sidebar → Customers → + Add Customer</td></tr>
+  <tr><td>Add incoming stock</td><td>Inventory</td><td>Sidebar → Inventory → Adjust → Stock In</td></tr>
+  <tr><td>Print barcode labels</td><td>Products</td><td>Products → click product → Variants → 🖨 Barcode</td></tr>
+  <tr><td>Apply for leave</td><td>Employees</td><td>Sidebar → Employees → My Leaves → + Apply</td></tr>
+  <tr><td>Send a customer reminder</td><td>Notifications</td><td>Sidebar → Notifications → Send Notification</td></tr>
+  <tr><td>Download a report</td><td>Reports</td><td>Sidebar → Reports → select tab → Download PDF</td></tr>
+</table>
+
+<h3 class="sub">Rental Status Flow</h3>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0;font-size:12px">
+  <span class="badge-gray">Reserved</span>
+  <span>→</span>
+  <span class="badge-blue">Ready for Pickup</span>
+  <span>→</span>
+  <span class="badge-amber">Picked Up</span>
+  <span>→</span>
+  <span style="background:#d1fae5;color:#065f46;padding:2px 7px;border-radius:99px;font-size:10px">Returned / Completed</span>
+</div>
+
+<h3 class="sub">Item Condition at Return</h3>
+<table>
+  <tr><th>Tile</th><th>When</th><th>What Happens</th></tr>
+  <tr><td>✓ Good</td><td>Item is fine</td><td>No charge added</td></tr>
+  <tr><td>⚠ Damaged</td><td>Item has damage</td><td>System adds damage fee automatically</td></tr>
+  <tr><td>✕ Lost</td><td>Customer didn't return it</td><td>Selling price charged (or custom amount)</td></tr>
+</table>
+
+<h3 class="sub">Need Help?</h3>
+<table>
+  <tr><th>Problem</th><th>What to Do</th></tr>
+  <tr><td>Can't see a menu option</td><td>Ask your manager — they can adjust your permissions</td></tr>
+  <tr><td>Sale fails (stock error)</td><td>Tell manager — item may be fully reserved for rentals</td></tr>
+  <tr><td>Forgot password</td><td>Ask manager/admin to reset it in Settings → Users</td></tr>
+  <tr><td>Customer asks to waive fine</td><td>Escalate to manager — only managers can override fines</td></tr>
+  <tr><td>Barcode won't scan</td><td>Try typing the SKU manually in the search box</td></tr>
+</table>
+
+<hr />
+<p style="text-align:center;color:var(--gray);font-size:11px">The Outfit Lounge &nbsp;·&nbsp; Staff User Guide v1.0 &nbsp;·&nbsp; May 2026</p>
+
+</div><!-- /page -->
+</body>
+</html>
