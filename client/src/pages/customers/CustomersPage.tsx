@@ -9,7 +9,7 @@ import Card from '@/components/common/Card';
 import SearchInput from '@/components/common/SearchInput';
 import Table from '@/components/common/Table';
 import Pagination from '@/components/common/Pagination';
-import Modal from '@/components/common/Modal';
+import Drawer from '@/components/common/Drawer';
 import Input from '@/components/common/Input';
 import Textarea from '@/components/common/Textarea';
 import EmptyState from '@/components/common/EmptyState';
@@ -165,11 +165,11 @@ export default function CustomersPage() {
         )}
       </Card>
 
-      <Modal
+      <Drawer
         open={showModal}
         onClose={() => setShowModal(false)}
         title={editCustomer ? 'Edit Customer' : 'Add Customer'}
-        size="md"
+       
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
@@ -189,7 +189,7 @@ export default function CustomersPage() {
           <Textarea label="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Full address..." rows={2} />
           <Textarea label="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Any additional notes..." rows={2} />
         </div>
-      </Modal>
+      </Drawer>
     </div>
   );
 }

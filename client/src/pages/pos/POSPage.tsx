@@ -13,7 +13,7 @@ import { customerService } from '@/services/customerService';
 import { useCartStore } from '@/store/cartStore';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
-import Modal from '@/components/common/Modal';
+import Drawer from '@/components/common/Drawer';
 import { formatCurrency } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 import type { ProductCategory } from '@/types';
@@ -451,7 +451,7 @@ export default function POSPage() {
 
             <Button
               variant="primary"
-              size="lg"
+             
               className="w-full"
               onClick={() => setShowCheckout(true)}
               icon={<CheckCircle size={18} />}
@@ -463,11 +463,11 @@ export default function POSPage() {
       </div>
 
       {/* Checkout Modal */}
-      <Modal
+      <Drawer
         open={showCheckout}
         onClose={() => setShowCheckout(false)}
         title="Checkout"
-        size="sm"
+       
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowCheckout(false)}>Cancel</Button>
@@ -533,10 +533,10 @@ export default function POSPage() {
 
           <Input label="Notes (optional)" value={checkoutForm.notes} onChange={(e) => setCheckoutForm({ ...checkoutForm, notes: e.target.value })} placeholder="Any notes..." />
         </div>
-      </Modal>
+      </Drawer>
 
       {/* Receipt Modal */}
-      <Modal open={showReceipt} onClose={() => setShowReceipt(false)} title="Receipt" size="sm">
+      <Drawer open={showReceipt} onClose={() => setShowReceipt(false)} title="Receipt">
         {receipt && (
           <div className="space-y-4">
             <div className="text-center border-b border-charcoal-500 pb-4">
@@ -565,16 +565,16 @@ export default function POSPage() {
             </div>
 
             <div className="flex gap-2 pt-2">
-              <Button variant="secondary" size="sm" className="flex-1" icon={<Printer size={14} />} onClick={() => window.print()}>
+              <Button variant="secondary" className="flex-1" icon={<Printer size={14} />} onClick={() => window.print()}>
                 Print
               </Button>
-              <Button variant="primary" size="sm" className="flex-1" onClick={() => setShowReceipt(false)}>
+              <Button variant="primary" className="flex-1" onClick={() => setShowReceipt(false)}>
                 Done
               </Button>
             </div>
           </div>
         )}
-      </Modal>
+      </Drawer>
     </div>
   );
 }

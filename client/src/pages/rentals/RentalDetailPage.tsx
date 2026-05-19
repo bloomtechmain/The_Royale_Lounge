@@ -7,7 +7,7 @@ import { rentalService } from '@/services/rentalService';
 import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import Badge from '@/components/common/Badge';
-import Modal from '@/components/common/Modal';
+import Drawer from '@/components/common/Drawer';
 import Select from '@/components/common/Select';
 import Input from '@/components/common/Input';
 import { formatCurrency, formatDate, formatDateTime, STATUS_LABELS } from '@/utils/formatters';
@@ -73,11 +73,11 @@ export default function RentalDetailPage() {
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" icon={<ArrowLeft size={16} />} onClick={() => navigate('/rentals')}>Back</Button>
+        <Button variant="ghost" icon={<ArrowLeft size={16} />} onClick={() => navigate('/rentals')}>Back</Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h2 className="page-title">{rental.booking_number}</h2>
-            <Badge status={rental.status} size="md" />
+            <Badge status={rental.status} />
           </div>
         </div>
         <div className="flex gap-2">
@@ -109,7 +109,7 @@ export default function RentalDetailPage() {
                   {rental.customer_email && <span className="text-xs text-charcoal-200">{rental.customer_email}</span>}
                 </div>
               </div>
-              <Button variant="ghost" size="sm" className="ml-auto" onClick={() => navigate(`/customers/${rental.customer_id}`)}>
+              <Button variant="ghost" className="ml-auto" onClick={() => navigate(`/customers/${rental.customer_id}`)}>
                 View Profile <ChevronRight size={14} />
               </Button>
             </div>
@@ -216,7 +216,7 @@ export default function RentalDetailPage() {
                 <div key={fine.id} className="text-sm">
                   <p className="text-charcoal-50">{fine.days_late} days overdue</p>
                   <p className="text-charcoal-200">{formatCurrency(fine.fine_per_day)}/day × {fine.days_late} = {formatCurrency(fine.total_fine)}</p>
-                  <Badge variant={fine.is_paid ? 'success' : 'error'} size="sm" className="mt-1">
+                  <Badge variant={fine.is_paid ? 'success' : 'error'} className="mt-1">
                     {fine.is_paid ? 'Paid' : 'Unpaid'}
                   </Badge>
                 </div>
@@ -229,11 +229,11 @@ export default function RentalDetailPage() {
             <h4 className="text-sm font-semibold text-charcoal-100 mb-3">Actions</h4>
             <div className="space-y-2">
               {rental.status === 'picked_up' || rental.status === 'late_return' ? (
-                <Button variant="secondary" size="sm" className="w-full" icon={<RotateCcw size={14} />} onClick={() => navigate(`/returns?rental=${id}`)}>
+                <Button variant="secondary" className="w-full" icon={<RotateCcw size={14} />} onClick={() => navigate(`/returns?rental=${id}`)}>
                   Process Return
                 </Button>
               ) : null}
-              <Button variant="ghost" size="sm" className="w-full" icon={<Bell size={14} />}>
+              <Button variant="ghost" className="w-full" icon={<Bell size={14} />}>
                 Send Reminder
               </Button>
             </div>
@@ -250,11 +250,11 @@ export default function RentalDetailPage() {
       </div>
 
       {/* Status Modal */}
-      <Modal
+      <Drawer
         open={showStatusModal}
         onClose={() => setShowStatusModal(false)}
         title="Update Rental Status"
-        size="sm"
+       
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowStatusModal(false)}>Cancel</Button>
@@ -287,14 +287,14 @@ export default function RentalDetailPage() {
             placeholder="Any notes about this status change..."
           />
         </div>
-      </Modal>
+      </Drawer>
 
       {/* Payment Modal */}
-      <Modal
+      <Drawer
         open={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         title="Add Payment"
-        size="sm"
+       
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowPaymentModal(false)}>Cancel</Button>
@@ -335,7 +335,7 @@ export default function RentalDetailPage() {
           />
           <Input label="Notes" value={payment.notes} onChange={(e) => setPayment({ ...payment, notes: e.target.value })} placeholder="Optional notes..." />
         </div>
-      </Modal>
+      </Drawer>
     </div>
   );
 }

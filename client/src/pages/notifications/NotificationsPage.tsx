@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import api from '@/services/api';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
-import Modal from '@/components/common/Modal';
+import Drawer from '@/components/common/Drawer';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
 import Textarea from '@/components/common/Textarea';
@@ -272,11 +272,11 @@ export default function NotificationsPage() {
       </Card>
 
       {/* Send Notification Modal */}
-      <Modal
+      <Drawer
         open={showSendModal}
         onClose={() => { setShowSendModal(false); setForm(EMPTY_FORM); }}
         title="Send Manual Notification"
-        size="sm"
+       
         footer={
           <>
             <Button variant="secondary" onClick={() => { setShowSendModal(false); setForm(EMPTY_FORM); }}>Cancel</Button>
@@ -343,7 +343,7 @@ export default function NotificationsPage() {
             rows={4}
           />
         </div>
-      </Modal>
+      </Drawer>
     </div>
   );
 }

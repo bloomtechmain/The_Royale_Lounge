@@ -9,7 +9,7 @@ import { rentalService } from '@/services/rentalService';
 import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import Badge from '@/components/common/Badge';
-import Modal from '@/components/common/Modal';
+import Drawer from '@/components/common/Drawer';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
 import Table from '@/components/common/Table';
@@ -139,7 +139,7 @@ export default function ReturnsPage() {
       key: 'actions',
       header: '',
       render: (r: any) => (
-        <Button variant="primary" size="sm" icon={<RotateCcw size={13} />} onClick={(e: any) => { e.stopPropagation(); openReturnModal(r); }}>
+        <Button variant="primary" icon={<RotateCcw size={13} />} onClick={(e: any) => { e.stopPropagation(); openReturnModal(r); }}>
           Process
         </Button>
       ),
@@ -213,11 +213,11 @@ export default function ReturnsPage() {
       </Card>
 
       {/* Return Modal */}
-      <Modal
+      <Drawer
         open={showReturnModal}
         onClose={() => { setShowReturnModal(false); setSelectedRental(null); }}
         title={`Process Return — ${selectedRental?.booking_number}`}
-        size="lg"
+       
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowReturnModal(false)}>Cancel</Button>
@@ -300,7 +300,7 @@ export default function ReturnsPage() {
             </div>
           )}
         </div>
-      </Modal>
+      </Drawer>
     </div>
   );
 }

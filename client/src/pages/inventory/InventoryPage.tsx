@@ -11,7 +11,7 @@ import StatCard from '@/components/common/StatCard';
 import SearchInput from '@/components/common/SearchInput';
 import Select from '@/components/common/Select';
 import Table from '@/components/common/Table';
-import Modal from '@/components/common/Modal';
+import Drawer from '@/components/common/Drawer';
 import Input from '@/components/common/Input';
 import Pagination from '@/components/common/Pagination';
 import { formatCurrency } from '@/utils/formatters';
@@ -99,7 +99,7 @@ export default function InventoryPage() {
       key: 'actions',
       header: '',
       render: (item: any) => (
-        <Button variant="ghost" size="sm" icon={<Edit size={13} />} onClick={(e: any) => { e.stopPropagation(); openMovement(item); }}>
+        <Button variant="ghost" icon={<Edit size={13} />} onClick={(e: any) => { e.stopPropagation(); openMovement(item); }}>
           Adjust
         </Button>
       ),
@@ -155,11 +155,11 @@ export default function InventoryPage() {
         )}
       </Card>
 
-      <Modal
+      <Drawer
         open={showMovementModal}
         onClose={() => setShowMovementModal(false)}
         title={selectedVariant ? `Adjust: ${selectedVariant.product_name}` : 'Inventory Movement'}
-        size="sm"
+       
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowMovementModal(false)}>Cancel</Button>
@@ -199,7 +199,7 @@ export default function InventoryPage() {
           />
           <Input label="Reason / Notes" value={movement.reason} onChange={(e) => setMovement({ ...movement, reason: e.target.value })} placeholder="Reason for this adjustment..." />
         </div>
-      </Modal>
+      </Drawer>
     </div>
   );
 }

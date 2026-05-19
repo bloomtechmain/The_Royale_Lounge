@@ -7,7 +7,7 @@ import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
-import Modal from '@/components/common/Modal';
+import Drawer from '@/components/common/Drawer';
 import Badge from '@/components/common/Badge';
 import { cn } from '@/utils/cn';
 import { ROLE_LABELS } from '@/utils/formatters';
@@ -443,7 +443,7 @@ function UserManagement() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h4 className="text-base font-semibold text-charcoal-50">User Accounts</h4>
-        <Button variant="primary" size="sm" icon={<Plus size={14} />} onClick={() => { setEditingUser(null); resetForm(); setShowModal(true); }}>
+        <Button variant="primary" icon={<Plus size={14} />} onClick={() => { setEditingUser(null); resetForm(); setShowModal(true); }}>
           Add User
         </Button>
       </div>
@@ -463,20 +463,20 @@ function UserManagement() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-charcoal-50">{user.name}</p>
-                    {!user.is_active && <Badge variant="error" size="sm">Inactive</Badge>}
+                    {!user.is_active && <Badge variant="error">Inactive</Badge>}
                   </div>
                   <p className="text-xs text-charcoal-200">{user.email}</p>
                 </div>
-                <Badge variant={user.role === 'super_admin' ? 'warning' : 'neutral'} size="sm">
+                <Badge variant={user.role === 'super_admin' ? 'warning' : 'neutral'}>
                   {ROLE_LABELS[user.role as UserRole] || user.role}
                 </Badge>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" icon={<Pencil size={13} />} onClick={() => openEdit(user)} />
-                  <Button variant="ghost" size="sm" icon={<RefreshCw size={13} />} onClick={() => openResetPassword(user.id)} />
+                  <Button variant="ghost" icon={<Pencil size={13} />} onClick={() => openEdit(user)} />
+                  <Button variant="ghost" icon={<RefreshCw size={13} />} onClick={() => openResetPassword(user.id)} />
                   {user.is_active && (
                     <Button
                       variant="ghost"
-                      size="sm"
+                     
                       icon={<Trash2 size={13} />}
                       className="text-red-400 hover:text-red-300"
                       onClick={() => deactivateMutation.mutate(user.id)}
@@ -490,11 +490,11 @@ function UserManagement() {
       </Card>
 
       {/* Add/Edit Modal */}
-      <Modal
+      <Drawer
         open={showModal}
         onClose={() => { setShowModal(false); setEditingUser(null); }}
         title={editingUser ? 'Edit User' : 'Add New User'}
-        size="sm"
+       
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
@@ -541,14 +541,14 @@ function UserManagement() {
             required={!editingUser}
           />
         </div>
-      </Modal>
+      </Drawer>
 
       {/* Reset Password Modal */}
-      <Modal
+      <Drawer
         open={showResetModal}
         onClose={() => setShowResetModal(false)}
         title="Reset Password"
-        size="sm"
+       
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowResetModal(false)}>Cancel</Button>
@@ -574,7 +574,7 @@ function UserManagement() {
             hint="Must be at least 8 characters"
           />
         </div>
-      </Modal>
+      </Drawer>
     </div>
   );
 }
