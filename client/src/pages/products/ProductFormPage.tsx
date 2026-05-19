@@ -6,7 +6,6 @@ import { Upload, X, Plus, Trash2, CheckCircle, Package, Tag, Calendar, ShoppingB
 import { toast } from 'sonner';
 import { productService } from '@/services/productService';
 import Button from '@/components/common/Button';
-import Card from '@/components/common/Card';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
 import Textarea from '@/components/common/Textarea';
@@ -173,35 +172,59 @@ export default function ProductFormPage() {
   };
 
   return (
-    <div className="max-w-3xl">
-      {/* Header */}
-      <div className="page-header">
-        <h2 className="page-title">{isEdit ? 'Edit Product' : 'New Product'}</h2>
-        <Button variant="secondary" onClick={() => navigate('/products')}>Cancel</Button>
-      </div>
+    <>
+      {/* Backdrop */}
+      <div
+        style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(3px)', zIndex: 40,
+        }}
+        onClick={() => navigate('/products')}
+      />
 
-      {/* Steps */}
-      <div className="flex items-center gap-0 mb-8">
-        {STEPS.map((label, i) => (
-          <div key={i} className="flex items-center flex-1">
-            <div
-              className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium flex-shrink-0 transition-all duration-200 ${
+      {/* Right-side panel */}
+      <motion.div
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        transition={{ type: 'tween', duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+        style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0,
+          width: '100%', maxWidth: 640,
+          background: '#1a1a26', borderLeft: '1px solid #2a2a38',
+          zIndex: 50, display: 'flex', flexDirection: 'column',
+          boxShadow: '-8px 0 40px rgba(0,0,0,0.6)',
+        }}
+      >
+        {/* Panel header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid #21212f', flexShrink: 0 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#c8c8d8', fontFamily: '"Playfair Display", Georgia, serif' }}>
+            {isEdit ? 'Edit Product' : 'New Product'}
+          </h2>
+          <button onClick={() => navigate('/products')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b6b80', padding: 6, borderRadius: 8, display: 'flex', alignItems: 'center' }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Steps */}
+        <div className="flex items-center px-6 py-4 border-b border-charcoal-600" style={{ flexShrink: 0 }}>
+          {STEPS.map((label, i) => (
+            <div key={i} className="flex items-center flex-1">
+              <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-medium flex-shrink-0 transition-all duration-200 ${
                 i < step ? 'bg-gold-gradient text-charcoal-900' :
                 i === step ? 'bg-charcoal-600 border-2 border-gold-600 text-gold-400' :
                 'bg-charcoal-600 border border-charcoal-400 text-charcoal-300'
-              }`}
-            >
-              {i < step ? <CheckCircle size={16} /> : i + 1}
+              }`}>
+                {i < step ? <CheckCircle size={13} /> : i + 1}
+              </div>
+              <span className={`ml-1.5 text-xs hidden sm:inline ${i === step ? 'text-charcoal-50 font-medium' : 'text-charcoal-300'}`}>{label}</span>
+              {i < STEPS.length - 1 && <div className={`flex-1 h-px mx-2 ${i < step ? 'bg-gold-700' : 'bg-charcoal-500'}`} />}
             </div>
-            <span className={`ml-2 text-sm hidden sm:inline ${i === step ? 'text-charcoal-50 font-medium' : 'text-charcoal-300'}`}>
-              {label}
-            </span>
-            {i < STEPS.length - 1 && <div className={`flex-1 h-px mx-3 ${i < step ? 'bg-gold-700' : 'bg-charcoal-500'}`} />}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      <Card>
+        {/* Scrollable body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+        <div>
         <AnimatePresence mode="wait">
           {/* Step 0: Basic Info */}
           {step === 0 && (
@@ -425,8 +448,11 @@ export default function ProductFormPage() {
           )}
         </AnimatePresence>
 
-        {/* Navigation */}
-        <div className="flex justify-between mt-6 pt-5 border-t border-charcoal-500">
+        </div>
+        </div>
+
+        {/* Footer navigation */}
+        <div style={{ borderTop: '1px solid #21212f', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', flexShrink: 0 }}>
           <Button variant="secondary" onClick={() => step > 0 ? setStep(step - 1) : navigate('/products')} disabled={createMutation.isPending}>
             {step === 0 ? 'Cancel' : 'Back'}
           </Button>
@@ -445,7 +471,7 @@ export default function ProductFormPage() {
             </Button>
           )}
         </div>
-      </Card>
-    </div>
+      </motion.div>
+    </>
   );
 }
