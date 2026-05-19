@@ -85,13 +85,17 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `, [sale.id, item.variantId, item.productName, item.variantInfo, item.quantity, item.unitPrice, item.discount, item.itemSubtotal]);
 
-      // Reduce stock
-      await client.query(`
+      // Reduce stock — only from the "for sale" portion
+      const stockRes = await client.query(`
         UPDATE product_variants
         SET stock_quantity = stock_quantity - $1,
             updated_at = NOW()
-        WHERE id = $2
+        WHERE id = $2 AND (stock_quantity - available_for_rent) >= $1
+        RETURNING id
       `, [item.quantity, item.variantId]);
+      if (stockRes.rowCount === 0) {
+        throw new Error(`Insufficient sale stock for "${item.productName}". Some units may be reserved for rentals.`);
+      }
 
       // Record inventory movement
       await client.query(`

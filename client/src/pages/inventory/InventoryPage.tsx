@@ -93,7 +93,15 @@ export default function InventoryPage() {
         </span>
       ),
     },
-    { key: 'available_for_rent', header: 'Available', render: (item: any) => <span className="text-blue-400">{item.available_for_rent}</span> },
+    {
+      key: 'for_sale',
+      header: 'For Sale',
+      render: (item: any) => {
+        const forSale = Math.max(0, item.stock_quantity - item.available_for_rent);
+        return <span className={cn('font-medium', forSale === 0 ? 'text-red-400' : 'text-emerald-400')}>{forSale}</span>;
+      },
+    },
+    { key: 'available_for_rent', header: 'For Rent', render: (item: any) => <span className="text-blue-400">{item.available_for_rent}</span> },
     { key: 'damaged', header: 'Damaged', render: (item: any) => <span className={item.damaged_count > 0 ? 'text-red-400' : 'text-charcoal-200'}>{item.damaged_count || 0}</span> },
     {
       key: 'actions',
