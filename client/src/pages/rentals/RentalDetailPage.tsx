@@ -64,10 +64,11 @@ export default function RentalDetailPage() {
   if (!rental) return <div className="text-charcoal-200">Rental not found.</div>;
 
   const nextStatuses = STATUS_TRANSITIONS[rental.status] || [];
-  const totalPaid = (rental.payments || []).reduce((sum: number, p: any) => {
+  const paidFromRecords = (rental.payments || []).reduce((sum: number, p: any) => {
     return p.payment_type !== 'refund' ? sum + parseFloat(p.amount) : sum - parseFloat(p.amount);
   }, 0);
-  const balanceDue = Math.max(0, Number(rental.total_rental_cost) - Number(rental.advance_payment) + Number(rental.total_fine || 0));
+  const totalPaid = Number(rental.advance_payment || 0) + paidFromRecords;
+  const balanceDue = Math.max(0, Number(rental.total_rental_cost) - totalPaid + Number(rental.total_fine || 0));
 
   return (
     <div className="space-y-5">
@@ -196,7 +197,7 @@ export default function RentalDetailPage() {
               {[
                 { label: 'Total Rental Cost', value: formatCurrency(rental.total_rental_cost), color: 'text-charcoal-50' },
                 { label: 'Discount', value: rental.discount_amount > 0 ? `-${formatCurrency(rental.discount_amount)}` : '—', color: 'text-emerald-400' },
-                { label: 'Advance Paid', value: formatCurrency(rental.advance_payment), color: 'text-emerald-400' },
+                { label: 'Total Paid', value: formatCurrency(totalPaid), color: 'text-emerald-400' },
                 ...(Number(rental.total_fine) > 0 ? [{ label: 'Fine', value: formatCurrency(rental.total_fine), color: 'text-red-400' }] : []),
                 { label: 'Balance Due', value: formatCurrency(balanceDue), color: balanceDue > 0 ? 'text-amber-400 font-bold' : 'text-emerald-400' },
               ].map(({ label, value, color }) => (

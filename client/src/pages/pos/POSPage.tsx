@@ -155,7 +155,8 @@ export default function POSPage() {
   const subtotal = getSubtotal();
   const discount = parseFloat(checkoutForm.discount || '0');
   const total = Math.max(0, subtotal - discount - discountAmount);
-  const amountPaid = parseFloat(checkoutForm.amountPaid || String(total));
+  const isCash = checkoutForm.paymentMethod === 'cash';
+  const amountPaid = isCash ? parseFloat(checkoutForm.amountPaid || String(total)) : total;
   const change = Math.max(0, amountPaid - total);
 
   const handleCheckout = () => {
@@ -430,6 +431,7 @@ export default function POSPage() {
                         type="number"
                         value={item.discount || ''}
                         onChange={(e) => updateDiscount(item.variantId, parseFloat(e.target.value) || 0)}
+                        onWheel={(e) => e.currentTarget.blur()}
                         placeholder="Disc."
                         className="w-full bg-charcoal-600 border border-charcoal-400 rounded-lg px-2 py-1 text-xs text-charcoal-100 focus:ring-1 focus:ring-gold-600 focus:border-gold-600 outline-none"
                         min="0"
@@ -470,6 +472,7 @@ export default function POSPage() {
               <Input
                 value={discountAmount || ''}
                 onChange={(e) => setCartDiscount(parseFloat(e.target.value) || 0)}
+                onWheel={(e: React.WheelEvent<HTMLInputElement>) => e.currentTarget.blur()}
                 placeholder="Cart discount (LKR)..."
                 icon={<Tag size={13} />}
                 type="number"
@@ -627,20 +630,24 @@ export default function POSPage() {
             </div>
           </div>
 
-          <Input
-            label="Amount Paid (LKR)"
-            type="number"
-            step="0.01"
-            min="0"
-            value={checkoutForm.amountPaid}
-            onChange={(e) => setCheckoutForm({ ...checkoutForm, amountPaid: e.target.value })}
-            placeholder={total.toFixed(2)}
-          />
-
-          {amountPaid > total && (
-            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-sm">
-              <span className="text-emerald-400">Change: {formatCurrency(change)}</span>
-            </div>
+          {isCash && (
+            <>
+              <Input
+                label="Amount Paid (LKR)"
+                type="number"
+                step="0.01"
+                min="0"
+                value={checkoutForm.amountPaid}
+                onChange={(e) => setCheckoutForm({ ...checkoutForm, amountPaid: e.target.value })}
+                onWheel={(e: React.WheelEvent<HTMLInputElement>) => e.currentTarget.blur()}
+                placeholder={total.toFixed(2)}
+              />
+              {amountPaid > total && (
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-sm">
+                  <span className="text-emerald-400">Change: {formatCurrency(change)}</span>
+                </div>
+              )}
+            </>
           )}
 
           <Input label="Notes (optional)" value={checkoutForm.notes} onChange={(e) => setCheckoutForm({ ...checkoutForm, notes: e.target.value })} placeholder="Any notes..." />

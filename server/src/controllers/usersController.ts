@@ -31,7 +31,9 @@ export async function createUser(req: Request, res: Response): Promise<void> {
 
 export async function updateUser(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
-  const { name, email, role, phone, isActive } = req.body;
+  const { name, email, role, phone, isActive, password } = req.body;
+
+  const passwordHash = password ? await bcrypt.hash(password, 10) : null;
 
   const result = await db.query(`
     UPDATE users SET
@@ -40,10 +42,11 @@ export async function updateUser(req: Request, res: Response): Promise<void> {
       role = COALESCE($3, role),
       phone = COALESCE($4, phone),
       is_active = COALESCE($5, is_active),
+      password_hash = COALESCE($6, password_hash),
       updated_at = NOW()
-    WHERE id = $6
+    WHERE id = $7
     RETURNING id, name, email, role, phone, is_active, updated_at
-  `, [name, email, role, phone, isActive, id]);
+  `, [name, email, role, phone, isActive, passwordHash, id]);
 
   if (!result.rows[0]) {
     res.status(404).json({ error: 'User not found' });

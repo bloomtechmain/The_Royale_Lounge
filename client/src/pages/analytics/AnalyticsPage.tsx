@@ -114,7 +114,7 @@ export default function AnalyticsPage() {
   const addMutation = useMutation({
     mutationFn: analyticsService.addCapital,
     onSuccess: () => {
-      toast.success('Investment recorded');
+      toast.success('Expense recorded');
       setShowAddForm(false);
       setAddForm({ amount: '', category: 'stock_purchase', note: '', investedAt: new Date().toISOString().split('T')[0] });
       qc.invalidateQueries({ queryKey: ['analytics'] });
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
   const deleteMutation = useMutation({
     mutationFn: analyticsService.deleteCapital,
     onSuccess: () => {
-      toast.success('Investment deleted');
+      toast.success('Expense deleted');
       qc.invalidateQueries({ queryKey: ['analytics'] });
       qc.invalidateQueries({ queryKey: ['analytics-capital'] });
     },
@@ -242,7 +242,7 @@ export default function AnalyticsPage() {
           loading={isLoading}
         />
         <StatCard
-          title="Capital Invested"
+          title="Total Expenses"
           value={formatCurrency(summary?.totalCapital ?? 0)}
           icon={<Wallet size={20} />}
           color="blue"
@@ -266,7 +266,7 @@ export default function AnalyticsPage() {
 
       {/* Revenue vs Capital Bar Chart */}
       <Card>
-        <h3 className="font-semibold text-charcoal-50 mb-5">Revenue vs Capital Invested</h3>
+        <h3 className="font-semibold text-charcoal-50 mb-5">Revenue vs Business Expenses</h3>
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chartData} barGap={2}>
@@ -280,10 +280,10 @@ export default function AnalyticsPage() {
                 contentStyle={customTooltipStyle}
                 formatter={(v: number, name: string) => [
                   formatCurrency(v),
-                  name === 'revenue' ? 'Revenue' : name === 'capital' ? 'Capital' : 'Profit',
+                  name === 'revenue' ? 'Revenue' : name === 'capital' ? 'Expenses' : 'Profit',
                 ]}
               />
-              <Legend formatter={(v) => v === 'revenue' ? 'Revenue' : v === 'capital' ? 'Capital' : 'Profit'} />
+              <Legend formatter={(v) => v === 'revenue' ? 'Revenue' : v === 'capital' ? 'Expenses' : 'Profit'} />
               <Bar dataKey="revenue" fill={CHART_COLORS.revenue} radius={[4, 4, 0, 0]} maxBarSize={32} />
               <Bar dataKey="capital" fill={CHART_COLORS.capital} radius={[4, 4, 0, 0]} maxBarSize={32} />
               <Bar dataKey="profit" radius={[4, 4, 0, 0]} maxBarSize={32}>
@@ -381,14 +381,14 @@ export default function AnalyticsPage() {
       {/* Capital Investments table */}
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-charcoal-50">Capital Investments</h3>
+          <h3 className="font-semibold text-charcoal-50">Business Expenses</h3>
           <Button
             variant="primary"
             size="sm"
             icon={showAddForm ? <ChevronDown size={14} /> : <Plus size={14} />}
             onClick={() => setShowAddForm(!showAddForm)}
           >
-            {showAddForm ? 'Cancel' : 'Add Investment'}
+            {showAddForm ? 'Cancel' : 'Add Expense'}
           </Button>
         </div>
 
@@ -439,7 +439,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="flex justify-end">
                   <Button variant="primary" onClick={handleAddSubmit} loading={addMutation.isPending}>
-                    Save Investment
+                    Save Expense
                   </Button>
                 </div>
               </div>
@@ -501,9 +501,9 @@ export default function AnalyticsPage() {
           </div>
         ) : (
           <p className="text-sm text-charcoal-200 text-center py-10">
-            No capital investments recorded for this period.
+            No business expenses recorded for this period.
             <br />
-            <span className="text-xs text-charcoal-300">Add an investment above to track your business costs.</span>
+            <span className="text-xs text-charcoal-300">Add an expense above to track your business costs.</span>
           </p>
         )}
       </Card>
