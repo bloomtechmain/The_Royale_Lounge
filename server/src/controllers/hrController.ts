@@ -426,33 +426,94 @@ export async function deleteAllowance(req: AuthRequest, res: Response): Promise<
 
 export async function markPaid(req: AuthRequest, res: Response): Promise<void> {
   const { id } = req.params;
-  const result = await db.query(`
-    UPDATE payroll_records SET
-      status       = 'paid',
-      paid_at      = NOW(),
-      processed_by = $1,
-      updated_at   = NOW()
-    WHERE id = $2 AND status != 'paid'
-    RETURNING *
-  `, [req.user?.id, id]);
 
-  if (!result.rows[0]) { res.status(404).json({ error: 'Record not found or already paid' }); return; }
-  res.json(result.rows[0]);
+  const client = await db.getClient();
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(`
+      UPDATE payroll_records SET
+        status       = 'paid',
+        paid_at      = NOW(),
+        processed_by = $1,
+        updated_at   = NOW()
+      WHERE id = $2 AND status != 'paid'
+      RETURNING *,
+        TO_CHAR(period_month, 'YYYY-MM') AS period_label,
+        (SELECT name FROM users WHERE id = employee_id) AS employee_name
+    `, [req.user?.id, id]);
+
+    if (!result.rows[0]) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ error: 'Record not found or already paid' }); return;
+    }
+
+    const rec = result.rows[0] as any;
+
+    // Auto-create salary expense entry
+    await client.query(`
+      INSERT INTO capital_investments
+        (amount, category, note, invested_at, created_by, payroll_record_id)
+      VALUES ($1, 'salaries', $2, CURRENT_DATE, $3, $4)
+      ON CONFLICT (payroll_record_id) DO NOTHING
+    `, [
+      rec.net_pay,
+      `Salary: ${rec.employee_name} (${rec.period_label})`,
+      req.user?.id,
+      id,
+    ]);
+
+    await client.query('COMMIT');
+    res.json(rec);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function bulkMarkPaid(req: AuthRequest, res: Response): Promise<void> {
   const { period } = req.params;
   const periodDate = `${period}-01`;
 
-  const result = await db.query(`
-    UPDATE payroll_records SET
-      status       = 'paid',
-      paid_at      = NOW(),
-      processed_by = $1,
-      updated_at   = NOW()
-    WHERE period_month = $2 AND status IN ('draft','processed')
-    RETURNING id
-  `, [req.user?.id, periodDate]);
+  const client = await db.getClient();
+  try {
+    await client.query('BEGIN');
 
-  res.json({ message: `Marked ${result.rowCount} records as paid`, count: result.rowCount });
+    const result = await client.query(`
+      UPDATE payroll_records SET
+        status       = 'paid',
+        paid_at      = NOW(),
+        processed_by = $1,
+        updated_at   = NOW()
+      WHERE period_month = $2 AND status IN ('draft','processed')
+      RETURNING id, net_pay,
+        TO_CHAR(period_month, 'YYYY-MM') AS period_label,
+        (SELECT name FROM users WHERE id = employee_id) AS employee_name
+    `, [req.user?.id, periodDate]);
+
+    // Auto-create salary expense entries for each newly paid record
+    for (const rec of result.rows as any[]) {
+      await client.query(`
+        INSERT INTO capital_investments
+          (amount, category, note, invested_at, created_by, payroll_record_id)
+        VALUES ($1, 'salaries', $2, CURRENT_DATE, $3, $4)
+        ON CONFLICT (payroll_record_id) DO NOTHING
+      `, [
+        rec.net_pay,
+        `Salary: ${rec.employee_name} (${rec.period_label})`,
+        req.user?.id,
+        rec.id,
+      ]);
+    }
+
+    await client.query('COMMIT');
+    res.json({ message: `Marked ${result.rowCount} records as paid`, count: result.rowCount });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
