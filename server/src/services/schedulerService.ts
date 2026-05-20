@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { db } from '../config/database';
 import {
-  sendNotification,
+  sendSmsAndWhatsapp,
   buildPickupReminderMessage,
   buildReturnReminderMessage,
   buildLateReturnMessage,
@@ -69,11 +69,7 @@ async function sendPickupReminders(): Promise<void> {
       pickupDate: tomorrowStr,
     });
 
-    if (rental.whatsapp) {
-      await sendNotification({ rentalId: rental.id, customerId: rental.customer_id, type: 'pickup_reminder', channel: 'whatsapp', recipient: rental.whatsapp, message });
-    } else if (rental.phone) {
-      await sendNotification({ rentalId: rental.id, customerId: rental.customer_id, type: 'pickup_reminder', channel: 'sms', recipient: rental.phone, message });
-    }
+    await sendSmsAndWhatsapp({ rentalId: rental.id, customerId: rental.customer_id, type: 'pickup_reminder', phone: rental.phone, whatsapp: rental.whatsapp, message });
   }
 
   if (res.rows.length > 0) {
@@ -101,11 +97,7 @@ async function sendReturnReminders(): Promise<void> {
       returnDate: tomorrowStr,
     });
 
-    const channel = rental.whatsapp ? 'whatsapp' : 'sms';
-    const recipient = rental.whatsapp || rental.phone;
-    if (recipient) {
-      await sendNotification({ rentalId: rental.id, customerId: rental.customer_id, type: 'return_reminder', channel, recipient, message });
-    }
+    await sendSmsAndWhatsapp({ rentalId: rental.id, customerId: rental.customer_id, type: 'return_reminder', phone: rental.phone, whatsapp: rental.whatsapp, message });
   }
 }
 
@@ -134,11 +126,7 @@ async function sendLateReturnWarnings(): Promise<void> {
       fineAmount: totalFine,
     });
 
-    const channel = rental.whatsapp ? 'whatsapp' : 'sms';
-    const recipient = rental.whatsapp || rental.phone;
-    if (recipient) {
-      await sendNotification({ rentalId: rental.id, customerId: rental.customer_id, type: 'late_warning', channel, recipient, message });
-    }
+    await sendSmsAndWhatsapp({ rentalId: rental.id, customerId: rental.customer_id, type: 'late_warning', phone: rental.phone, whatsapp: rental.whatsapp, message });
   }
 }
 

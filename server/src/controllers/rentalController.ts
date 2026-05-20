@@ -4,7 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { getPagination, paginatedResponse } from '../utils/pagination';
 import { generateBookingNumber } from '../utils/generateSKU';
 import {
-  sendNotification,
+  sendSmsAndWhatsapp,
   buildBookingConfirmationMessage,
   buildReadyForPickupMessage,
   buildPickedUpMessage,
@@ -222,7 +222,7 @@ export async function createRental(req: AuthRequest, res: Response): Promise<voi
     // Send booking confirmation notification
     const customerRes = await db.query(`SELECT * FROM customers WHERE id = $1`, [customerId]);
     const customer = customerRes.rows[0];
-    if (customer?.whatsapp || customer?.phone) {
+    if (customer?.phone) {
       const message = buildBookingConfirmationMessage({
         customerName: customer.name,
         bookingNumber,
@@ -231,12 +231,12 @@ export async function createRental(req: AuthRequest, res: Response): Promise<voi
         totalCost,
         advancePaid: advancePayment || 0,
       });
-      await sendNotification({
+      await sendSmsAndWhatsapp({
         rentalId: rental.id,
         customerId,
         type: 'booking_confirmed',
-        channel: customer.whatsapp ? 'whatsapp' : 'sms',
-        recipient: customer.whatsapp || customer.phone,
+        phone: customer.phone,
+        whatsapp: customer.whatsapp,
         message,
       });
     }
@@ -302,34 +302,27 @@ export async function updateRentalStatus(req: AuthRequest, res: Response): Promi
         `SELECT * FROM customers WHERE id = $1`, [rental.customer_id]
       );
       const customer = customerRes.rows[0];
-      const phone = customer?.whatsapp || customer?.phone;
 
-      if (phone) {
-        let message: string;
-        let notifType: string;
+      if (customer?.phone) {
+        const isReady = status === 'ready_for_pickup';
+        const message = isReady
+          ? buildReadyForPickupMessage({
+              customerName: customer.name,
+              bookingNumber: rental.booking_number,
+              pickupDate: rental.rental_start_date,
+            })
+          : buildPickedUpMessage({
+              customerName: customer.name,
+              bookingNumber: rental.booking_number,
+              returnDate: rental.rental_end_date,
+            });
 
-        if (status === 'ready_for_pickup') {
-          message = buildReadyForPickupMessage({
-            customerName: customer.name,
-            bookingNumber: rental.booking_number,
-            pickupDate: rental.rental_start_date,
-          });
-          notifType = 'ready_for_pickup';
-        } else {
-          message = buildPickedUpMessage({
-            customerName: customer.name,
-            bookingNumber: rental.booking_number,
-            returnDate: rental.rental_end_date,
-          });
-          notifType = 'picked_up';
-        }
-
-        await sendNotification({
+        await sendSmsAndWhatsapp({
           rentalId: rental.id,
           customerId: rental.customer_id,
-          type: notifType,
-          channel: customer.whatsapp ? 'whatsapp' : 'sms',
-          recipient: phone,
+          type: status,
+          phone: customer.phone,
+          whatsapp: customer.whatsapp,
           message,
         });
       }
