@@ -44,11 +44,10 @@ export async function sendNotification(payload: NotificationPayload): Promise<vo
 
     switch (channel) {
       case 'sms':
-        skipped = await sendFitSMS(recipient, message);
+        skipped = await sendFitSMS(recipient, message, 'sms');
         break;
       case 'whatsapp':
-        // FitSMS also supports WhatsApp — using same gateway
-        skipped = await sendFitSMS(recipient, message);
+        skipped = await sendFitSMS(recipient, message, 'whatsapp');
         break;
       case 'email':
         await sendEmail(recipient, getEmailSubject(type), message);
@@ -85,26 +84,28 @@ export async function sendNotification(payload: NotificationPayload): Promise<vo
 
 // ─── FitSMS Integration ───────────────────────────────────────────────────────
 
-async function getFitSMSConfig(): Promise<{ apiToken: string; senderId: string; enabled: boolean }> {
+async function getFitSMSConfig(): Promise<{ apiToken: string; senderId: string; smsEnabled: boolean; whatsappEnabled: boolean }> {
   const res = await db.query<{ key: string; value: string }>(
-    `SELECT key, value FROM settings WHERE key IN ('fitsms_api_token', 'fitsms_sender_id', 'sms_enabled')`
+    `SELECT key, value FROM settings WHERE key IN ('fitsms_api_token', 'fitsms_sender_id', 'sms_enabled', 'whatsapp_enabled')`
   );
   const map: Record<string, string> = {};
   for (const row of res.rows) map[row.key] = row.value;
 
   return {
-    apiToken:  map['fitsms_api_token'] || env.FITSMS_API_TOKEN,
-    senderId:  map['fitsms_sender_id'] || env.FITSMS_SENDER_ID,
-    enabled:   map['sms_enabled'] !== 'false',
+    apiToken:        map['fitsms_api_token']  || env.FITSMS_API_TOKEN,
+    senderId:        map['fitsms_sender_id']  || env.FITSMS_SENDER_ID,
+    smsEnabled:      map['sms_enabled']       !== 'false',
+    whatsappEnabled: map['whatsapp_enabled']  === 'true',
   };
 }
 
 // Returns true if skipped (disabled), false if sent successfully
-async function sendFitSMS(phone: string, message: string): Promise<boolean> {
-  const { apiToken, senderId, enabled } = await getFitSMSConfig();
+async function sendFitSMS(phone: string, message: string, channel: 'sms' | 'whatsapp' = 'sms'): Promise<boolean> {
+  const { apiToken, senderId, smsEnabled, whatsappEnabled } = await getFitSMSConfig();
 
+  const enabled = channel === 'whatsapp' ? whatsappEnabled : smsEnabled;
   if (!enabled) {
-    console.log(`[SMS] SMS disabled — skipping message to ${phone}`);
+    console.log(`[${channel.toUpperCase()}] ${channel} disabled — skipping message to ${phone}`);
     return true;
   }
 
