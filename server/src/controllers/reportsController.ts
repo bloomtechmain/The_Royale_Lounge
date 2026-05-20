@@ -331,13 +331,22 @@ export async function getRentalReport(req: Request, res: Response): Promise<void
 
 export async function getExpensesReport(req: Request, res: Response): Promise<void> {
   try {
-    const { fromDate, toDate, category } = req.query as Record<string, string>;
+    const { fromDate, toDate, category, mode } = req.query as Record<string, string>;
     const from = fromDate || new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
     const to   = toDate   || new Date().toISOString().split('T')[0];
+
+    // mode='owner'    → only owner_contribution
+    // mode='expenses' → exclude owner_contribution
+    // default         → all
+    let modeFilter = '';
+    if (mode === 'owner')    modeFilter = ` AND category = 'owner_contribution'`;
+    if (mode === 'expenses') modeFilter = ` AND category != 'owner_contribution'`;
 
     const baseParams: any[] = [from, to];
     const catFilter = category && category !== 'all' ? ` AND category = $3` : '';
     if (category && category !== 'all') baseParams.push(category);
+
+    const combinedFilter = modeFilter + catFilter;
 
     const thisMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
       .toISOString().split('T')[0];
@@ -346,7 +355,7 @@ export async function getExpensesReport(req: Request, res: Response): Promise<vo
       db.query(`
         SELECT COALESCE(SUM(amount), 0)::float AS total, COUNT(*)::int AS count
         FROM capital_investments
-        WHERE invested_at BETWEEN $1 AND $2${catFilter}
+        WHERE invested_at BETWEEN $1 AND $2${combinedFilter}
       `, baseParams),
 
       db.query(`
@@ -354,7 +363,7 @@ export async function getExpensesReport(req: Request, res: Response): Promise<vo
                COALESCE(SUM(amount), 0)::float AS total,
                COUNT(*)::int AS count
         FROM capital_investments
-        WHERE invested_at BETWEEN $1 AND $2
+        WHERE invested_at BETWEEN $1 AND $2${modeFilter}
         GROUP BY category ORDER BY total DESC
       `, [from, to]),
 
@@ -362,7 +371,7 @@ export async function getExpensesReport(req: Request, res: Response): Promise<vo
         SELECT TO_CHAR(DATE_TRUNC('month', invested_at), 'YYYY-MM') AS month,
                COALESCE(SUM(amount), 0)::float AS total
         FROM capital_investments
-        WHERE invested_at BETWEEN $1 AND $2${catFilter}
+        WHERE invested_at BETWEEN $1 AND $2${combinedFilter}
         GROUP BY DATE_TRUNC('month', invested_at)
         ORDER BY 1 ASC
       `, baseParams),
@@ -371,20 +380,23 @@ export async function getExpensesReport(req: Request, res: Response): Promise<vo
         SELECT ci.*, u.name AS created_by_name
         FROM capital_investments ci
         LEFT JOIN users u ON u.id = ci.created_by
-        WHERE ci.invested_at BETWEEN $1 AND $2${catFilter}
+        WHERE ci.invested_at BETWEEN $1 AND $2${combinedFilter}
         ORDER BY ci.invested_at DESC, ci.created_at DESC
         LIMIT 200
       `, baseParams),
 
       db.query(`
         SELECT COALESCE(SUM(amount), 0)::float AS total, COUNT(*)::int AS count
-        FROM capital_investments WHERE invested_at >= $1
+        FROM capital_investments WHERE invested_at >= $1${modeFilter}
       `, [thisMonthStart]),
     ]);
 
     const s   = summaryRes.rows[0]    as any;
     const tm  = thisMonthRes.rows[0]  as any;
-    const byCategory = byCategoryRes.rows as any[];
+    const byCategory = (byCategoryRes.rows as any[]).filter((r) =>
+      mode === 'owner'    ? r.category === 'owner_contribution' :
+      mode === 'expenses' ? r.category !== 'owner_contribution' : true
+    );
 
     res.json({
       summary: {

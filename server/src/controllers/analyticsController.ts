@@ -62,22 +62,24 @@ export async function getAnalytics(req: Request, res: Response): Promise<void> {
       ORDER BY 1 ASC
     `, [from, to]),
 
-    // Monthly capital investments
+    // Monthly operating expenses (excludes owner contributions)
     db.query(`
       SELECT TO_CHAR(DATE_TRUNC('month', invested_at), 'YYYY-MM') AS month,
              COALESCE(SUM(amount), 0)::float AS capital
       FROM capital_investments
       WHERE invested_at BETWEEN $1 AND $2
+        AND category != 'owner_contribution'
       GROUP BY DATE_TRUNC('month', invested_at)
       ORDER BY 1 ASC
     `, [from, to]),
 
-    // Capital by category (for full range)
+    // Capital by category (excludes owner contributions)
     db.query(`
       SELECT category,
              COALESCE(SUM(amount), 0)::float AS total
       FROM capital_investments
       WHERE invested_at BETWEEN $1 AND $2
+        AND category != 'owner_contribution'
       GROUP BY category
       ORDER BY total DESC
     `, [from, to]),
