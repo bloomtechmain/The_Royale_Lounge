@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Plus, Package, Grid, List, Tag, Barcode } from 'lucide-react';
@@ -42,6 +43,12 @@ export default function ProductsPage() {
       page,
       limit: 24,
     }),
+  });
+
+  const products = data?.data || [];
+  const { searchRef, focusedIndex, handleSearchKeyDown, handleRowKeyDown, setRowRef } = useListKeyNav({
+    items: products,
+    onEnter: useCallback((p: Product) => navigate(`/products/${p.id}`), [navigate]),
   });
 
   const { data: categories } = useQuery({
@@ -138,8 +145,11 @@ export default function ProductsPage() {
       <Card>
         <div className="flex flex-wrap items-center gap-3">
           <SearchInput
+            ref={searchRef}
+            autoFocus
             value={search}
             onChange={(v) => { setSearch(v); setPage(1); }}
+            onKeyDown={handleSearchKeyDown}
             placeholder="Search by name, SKU, or barcode..."
             className="flex-1 min-w-48"
           />
@@ -225,11 +235,14 @@ export default function ProductsPage() {
         ) : (
           <Table
             columns={columns}
-            data={data?.data || []}
+            data={products}
             loading={isLoading}
             rowKey={(p) => p.id}
             onRowClick={(p) => navigate(`/products/${p.id}`)}
             emptyMessage="No products found"
+            focusedIndex={focusedIndex}
+            onRowKeyDown={handleRowKeyDown}
+            setRowRef={setRowRef}
           />
         )}
 

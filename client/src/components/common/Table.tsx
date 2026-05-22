@@ -17,12 +17,19 @@ interface TableProps<T> {
   onRowClick?: (row: T) => void;
   rowKey?: (row: T) => string;
   className?: string;
+  // keyboard nav
+  focusedIndex?: number;
+  onRowKeyDown?: (e: React.KeyboardEvent, index: number) => void;
+  setRowRef?: (el: HTMLTableRowElement | null, index: number) => void;
 }
 
 export default function Table<T extends Record<string, any>>({
   columns, data, loading, emptyMessage = 'No data found',
   onRowClick, rowKey, className,
+  focusedIndex, onRowKeyDown, setRowRef,
 }: TableProps<T>) {
+  const hasNav = !!(onRowKeyDown && setRowRef);
+
   return (
     <div className={cn('overflow-x-auto scrollbar-thin', className)}>
       <table className="w-full">
@@ -45,9 +52,7 @@ export default function Table<T extends Record<string, any>>({
           {loading ? (
             <tr>
               <td colSpan={columns.length} className="py-16 text-center">
-                <div className="flex justify-center">
-                  <Spinner size="lg" />
-                </div>
+                <div className="flex justify-center"><Spinner size="lg" /></div>
               </td>
             </tr>
           ) : data.length === 0 ? (
@@ -60,11 +65,16 @@ export default function Table<T extends Record<string, any>>({
             data.map((row, idx) => (
               <tr
                 key={rowKey ? rowKey(row) : idx}
+                ref={hasNav ? (el) => setRowRef!(el, idx) : undefined}
+                tabIndex={hasNav ? 0 : undefined}
                 className={cn(
                   'table-row',
-                  onRowClick && 'cursor-pointer'
+                  (onRowClick || hasNav) && 'cursor-pointer',
+                  hasNav && focusedIndex === idx && 'ring-1 ring-inset ring-gold-600/60 bg-gold-900/10',
+                  hasNav && 'focus:outline-none focus:ring-1 focus:ring-inset focus:ring-gold-500/70 focus:bg-gold-900/10',
                 )}
                 onClick={() => onRowClick?.(row)}
+                onKeyDown={hasNav ? (e) => onRowKeyDown!(e, idx) : undefined}
               >
                 {columns.map((col) => (
                   <td key={col.key} className={cn('py-3.5 px-4 text-sm text-charcoal-100', col.className)}>

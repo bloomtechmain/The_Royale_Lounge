@@ -121,6 +121,7 @@ export default function InventoryPage() {
       <Card className="flex-shrink-0">
         <div className="flex flex-wrap items-center gap-3">
           <SearchInput
+            autoFocus
             value={search}
             onChange={(v) => setSearch(v)}
             placeholder="Search products or SKU..."

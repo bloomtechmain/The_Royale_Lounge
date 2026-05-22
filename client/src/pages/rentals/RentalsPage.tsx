@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -363,6 +364,11 @@ export default function RentalsPage() {
   });
 
   const allRentals: Rental[] = kanbanData?.data || [];
+  const rentals: Rental[] = data?.data || [];
+  const { searchRef, focusedIndex, handleSearchKeyDown, handleRowKeyDown, setRowRef } = useListKeyNav({
+    items: rentals,
+    onEnter: useCallback((r: Rental) => navigate(`/rentals/${r.id}`), [navigate]),
+  });
 
   const kanbanCols = KANBAN_COLS.map((col) => ({
     ...col,
@@ -399,8 +405,11 @@ export default function RentalsPage() {
       <Card>
         <div className="flex flex-wrap items-center gap-3">
           <SearchInput
+            ref={searchRef}
+            autoFocus
             value={search}
             onChange={(v) => { setSearch(v); setPage(1); }}
+            onKeyDown={handleSearchKeyDown}
             placeholder="Search booking, customer, phone..."
             className="flex-1 min-w-48"
           />
@@ -455,11 +464,14 @@ export default function RentalsPage() {
         <Card padding="none">
           <Table
             columns={listColumns}
-            data={data?.data || []}
+            data={rentals}
             loading={isLoading}
             rowKey={(r) => r.id}
             onRowClick={(r) => navigate(`/rentals/${r.id}`)}
             emptyMessage="No rentals found"
+            focusedIndex={focusedIndex}
+            onRowKeyDown={handleRowKeyDown}
+            setRowRef={setRowRef}
           />
           {data?.pagination && (
             <Pagination

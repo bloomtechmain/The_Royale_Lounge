@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Users, Phone, Mail, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -28,6 +29,12 @@ export default function CustomersPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['customers', { search, page }],
     queryFn: () => customerService.getAll({ search: search || undefined, page, limit: 20 }),
+  });
+
+  const customers = (data?.data as Customer[]) || [];
+  const { searchRef, focusedIndex, handleSearchKeyDown, handleRowKeyDown, setRowRef } = useListKeyNav({
+    items: customers,
+    onEnter: useCallback((c: Customer) => navigate(`/customers/${c.id}`), [navigate]),
   });
 
   const createMutation = useMutation({
@@ -139,8 +146,11 @@ export default function CustomersPage() {
 
       <Card>
         <SearchInput
+          ref={searchRef}
+          autoFocus
           value={search}
           onChange={(v) => { setSearch(v); setPage(1); }}
+          onKeyDown={handleSearchKeyDown}
           placeholder="Search by name, phone, or email..."
         />
       </Card>
@@ -148,11 +158,14 @@ export default function CustomersPage() {
       <Card padding="none">
         <Table
           columns={columns}
-          data={(data?.data as any[]) || []}
+          data={customers}
           loading={isLoading}
           rowKey={(c) => c.id}
           onRowClick={(c) => navigate(`/customers/${c.id}`)}
           emptyMessage="No customers found"
+          focusedIndex={focusedIndex}
+          onRowKeyDown={handleRowKeyDown}
+          setRowRef={setRowRef}
         />
         {data?.pagination && (
           <Pagination

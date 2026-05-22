@@ -221,6 +221,7 @@ export default function NotificationsPage() {
       <Card>
         <div className="flex flex-wrap gap-3">
           <SearchInput
+            autoFocus
             value={search}
             onChange={(v) => { setSearch(v); setPage(1); }}
             placeholder="Search customer, booking..."
