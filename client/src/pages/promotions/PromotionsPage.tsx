@@ -115,24 +115,29 @@ export default function PromotionsPage() {
   }, [promotions, scopeFilter, statusFilter]);
 
   // ── Mutations ──────────────────────────────────────────────────────────────
+  const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey: ['promotions'] });
+    qc.invalidateQueries({ queryKey: ['promotions-active'] });
+  };
+
   const createMut = useMutation({
     mutationFn: promotionService.create,
-    onSuccess: () => { toast.success('Promotion created!'); qc.invalidateQueries({ queryKey: ['promotions'] }); closeForm(); },
+    onSuccess: () => { toast.success('Promotion created!'); invalidateAll(); closeForm(); },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to create promotion'),
   });
   const updateMut = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: any }) => promotionService.update(id, payload),
-    onSuccess: () => { toast.success('Promotion updated!'); qc.invalidateQueries({ queryKey: ['promotions'] }); closeForm(); },
+    onSuccess: () => { toast.success('Promotion updated!'); invalidateAll(); closeForm(); },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to update promotion'),
   });
   const toggleMut = useMutation({
     mutationFn: promotionService.toggle,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['promotions'] }),
+    onSuccess: () => invalidateAll(),
     onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to toggle promotion'),
   });
   const deleteMut = useMutation({
     mutationFn: promotionService.delete,
-    onSuccess: () => { toast.success('Promotion removed'); qc.invalidateQueries({ queryKey: ['promotions'] }); },
+    onSuccess: () => { toast.success('Promotion removed'); invalidateAll(); },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to delete promotion'),
   });
 
