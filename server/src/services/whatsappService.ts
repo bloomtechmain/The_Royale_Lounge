@@ -1,4 +1,11 @@
+import makeWASocket, {
+  useMultiFileAuthState,
+  DisconnectReason,
+  fetchLatestBaileysVersion,
+  WASocket,
+} from '@whiskeysockets/baileys';
 import QRCode from 'qrcode';
+import pino from 'pino';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -8,7 +15,7 @@ const AUTH_DIR = process.env.WA_AUTH_DIR
 // ─── State ────────────────────────────────────────────────────────────────────
 export type WAStatus = 'disconnected' | 'qr_ready' | 'connecting' | 'connected';
 
-let sock: any = null;
+let sock: WASocket | null = null;
 let status: WAStatus = 'disconnected';
 let qrDataUrl: string | null = null;
 let connectedPhone: string | null = null;
@@ -36,22 +43,13 @@ export function isConnected(): boolean {
   return status === 'connected';
 }
 
-// ─── Connect (dynamic import of ESM Baileys) ──────────────────────────────────
+// ─── Connect ──────────────────────────────────────────────────────────────────
 export async function connectWhatsApp(): Promise<void> {
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
 
   if (!fs.existsSync(AUTH_DIR)) {
     fs.mkdirSync(AUTH_DIR, { recursive: true });
   }
-
-  // Dynamic import — required because @whiskeysockets/baileys is ESM-only
-  const baileys = await import('@whiskeysockets/baileys');
-  const makeWASocket         = baileys.default;
-  const useMultiFileAuthState = baileys.useMultiFileAuthState;
-  const DisconnectReason      = baileys.DisconnectReason;
-  const fetchLatestBaileysVersion = baileys.fetchLatestBaileysVersion;
-
-  const pino = (await import('pino')).default;
 
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
   const { version } = await fetchLatestBaileysVersion();
@@ -61,7 +59,7 @@ export async function connectWhatsApp(): Promise<void> {
     auth: state,
     printQRInTerminal: false,
     logger: pino({ level: 'silent' }),
-    browser: ['Royale Lounge POS', 'Chrome', '1.0'] as [string, string, string],
+    browser: ['Royale Lounge POS', 'Chrome', '1.0'],
     connectTimeoutMs: 60_000,
     keepAliveIntervalMs: 30_000,
   });
@@ -69,7 +67,7 @@ export async function connectWhatsApp(): Promise<void> {
   status = 'connecting';
   emit();
 
-  sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }: any) => {
+  sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
     if (qr) {
       try {
         qrDataUrl = await QRCode.toDataURL(qr, { width: 256 });
@@ -81,7 +79,7 @@ export async function connectWhatsApp(): Promise<void> {
     }
 
     if (connection === 'close') {
-      const code = lastDisconnect?.error?.output?.statusCode;
+      const code = (lastDisconnect?.error as any)?.output?.statusCode;
       qrDataUrl = null;
       sock = null;
 
