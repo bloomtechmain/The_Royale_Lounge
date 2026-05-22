@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { RotateCcw, AlertTriangle, CheckCircle, Package, Clock, XCircle } from 'lucide-react';
+import { RotateCcw, AlertTriangle, CheckCircle, Package, Clock, XCircle, Banknote, CreditCard, Smartphone, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { returnService } from '@/services/returnService';
 import { rentalService } from '@/services/rentalService';
@@ -12,7 +12,6 @@ import Card from '@/components/common/Card';
 import Badge from '@/components/common/Badge';
 import Drawer from '@/components/common/Drawer';
 import Input from '@/components/common/Input';
-import Select from '@/components/common/Select';
 import Table from '@/components/common/Table';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
@@ -41,6 +40,13 @@ function calcDamageCharge(
 function isSaleItem(item: any) {
   return item.product_type === 'sale' || item.product_type === 'both';
 }
+
+const PAYMENT_METHODS = [
+  { value: 'cash',           label: 'Cash',         icon: Banknote   },
+  { value: 'card',           label: 'Card',         icon: CreditCard },
+  { value: 'mobile_payment', label: 'Mobile Pay',   icon: Smartphone },
+  { value: 'bank_transfer',  label: 'Bank Transfer',icon: Building2  },
+] as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ReturnsPage() {
@@ -447,24 +453,35 @@ export default function ReturnsPage() {
             </div>
           </div>
 
-          {/* Return date + payment method */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Return Date"
-              type="date"
-              value={returnDate}
-              onChange={(e) => setReturnDate(e.target.value)}
-            />
-            <Select
-              label="Payment Method"
-              options={[
-                { value: 'cash',           label: 'Cash' },
-                { value: 'card',           label: 'Card' },
-                { value: 'mobile_payment', label: 'Mobile Payment' },
-              ]}
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-            />
+          {/* Return date */}
+          <Input
+            label="Return Date"
+            type="date"
+            value={returnDate}
+            onChange={(e) => setReturnDate(e.target.value)}
+          />
+
+          {/* Payment Method Tiles */}
+          <div>
+            <p className="text-sm font-medium text-charcoal-200 mb-2">Payment Method</p>
+            <div className="grid grid-cols-4 gap-2">
+              {PAYMENT_METHODS.map(({ value, label, icon: Icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setPaymentMethod(value)}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl border-2 transition-all',
+                    paymentMethod === value
+                      ? 'border-gold-500 bg-gold-700/20 text-gold-400'
+                      : 'border-charcoal-500 text-charcoal-300 hover:border-charcoal-400 hover:text-charcoal-100'
+                  )}
+                >
+                  <Icon size={18} />
+                  <span className="text-[10px] font-medium text-center leading-tight">{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Late fine */}
