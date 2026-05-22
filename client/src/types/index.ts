@@ -286,3 +286,34 @@ export interface Setting {
 }
 
 export type Settings = Record<string, Setting>;
+
+// ─── Promotions ───────────────────────────────────────────────────────────────
+export type PromotionType = 'percentage' | 'flat_amount' | 'buy_x_get_y' | 'free_item';
+export type PromotionScope = 'pos' | 'rental' | 'both';
+
+export interface Promotion {
+  id: string;
+  name: string;
+  description?: string;
+  type: PromotionType;
+  scope: PromotionScope;
+  percentage_value?: number;
+  flat_amount_value?: number;
+  buy_quantity?: number;
+  get_quantity?: number;
+  free_variant_id?: string;
+  free_product_name?: string;
+  free_variant_sku?: string;
+  free_variant_size?: string;
+  free_variant_color?: string;
+  free_variant_selling_price?: number;
+  free_variant_rental_price_per_day?: number;
+  min_order_amount?: number;
+  max_usage_count?: number;
+  usage_count: number;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  created_by_name?: string;
+  created_at: string;
+}

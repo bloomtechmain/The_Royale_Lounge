@@ -12,6 +12,7 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
     paymentMethod = 'cash',
     amountPaid,
     notes,
+    promotionId,
   } = req.body;
 
   if (!items?.length) {
@@ -60,8 +61,64 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
       });
     }
 
+    // ── Promotion resolution ────────────────────────────────────────────────
+    let promotionDiscount = 0;
+    let resolvedPromotionId: string | null = null;
+
+    if (promotionId) {
+      const promoRes = await client.query(`
+        SELECT * FROM promotions
+        WHERE id = $1
+          AND is_active = true
+          AND CURRENT_DATE BETWEEN start_date AND end_date
+          AND (scope = 'pos' OR scope = 'both')
+          AND (max_usage_count IS NULL OR usage_count < max_usage_count)
+        FOR UPDATE
+      `, [promotionId]);
+
+      if (!promoRes.rows[0]) throw new Error('Selected promotion is no longer valid.');
+      const promo = promoRes.rows[0];
+
+      if (promo.min_order_amount && subtotal < promo.min_order_amount) {
+        throw new Error(`Order subtotal must be at least LKR ${promo.min_order_amount} for this promotion.`);
+      }
+
+      if (promo.type === 'percentage') {
+        promotionDiscount = subtotal * (parseFloat(promo.percentage_value) / 100);
+      } else if (promo.type === 'flat_amount') {
+        promotionDiscount = Math.min(parseFloat(promo.flat_amount_value), subtotal);
+      } else if (promo.type === 'buy_x_get_y') {
+        const totalQty = itemDetails.reduce((s: number, i: any) => s + i.quantity, 0);
+        if (totalQty >= promo.buy_quantity) {
+          const cheapestPrice = Math.min(...itemDetails.map((i: any) => i.unitPrice - i.discount));
+          promotionDiscount = promo.get_quantity * cheapestPrice;
+        }
+      } else if (promo.type === 'free_item') {
+        const fvRes = await client.query(
+          `SELECT selling_price FROM product_variants WHERE id = $1`,
+          [promo.free_variant_id]
+        );
+        if (fvRes.rows[0]) {
+          promotionDiscount = parseFloat(fvRes.rows[0].selling_price || '0');
+        }
+      }
+
+      promotionDiscount = Math.max(0, Math.min(promotionDiscount, subtotal));
+      resolvedPromotionId = promotionId;
+
+      await client.query(
+        `UPDATE promotions SET usage_count = usage_count + 1, updated_at = NOW() WHERE id = $1`,
+        [promotionId]
+      );
+      await client.query(`
+        UPDATE promotions SET is_active = false, updated_at = NOW()
+        WHERE id = $1 AND max_usage_count IS NOT NULL AND usage_count >= max_usage_count
+      `, [promotionId]);
+    }
+
+    const totalDiscountAmount = discountAmount + promotionDiscount;
     const taxAmount = subtotal * (taxRate / 100);
-    const totalAmount = subtotal - discountAmount + taxAmount;
+    const totalAmount = subtotal - totalDiscountAmount + taxAmount;
     const changeAmount = Math.max(0, (amountPaid || totalAmount) - totalAmount);
 
     const saleRes = await client.query(`
@@ -71,7 +128,7 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
       RETURNING *
     `, [
-      saleNumber, customerId || null, subtotal, discountAmount, taxAmount,
+      saleNumber, customerId || null, subtotal, totalDiscountAmount, taxAmount,
       totalAmount, amountPaid || totalAmount, changeAmount,
       paymentMethod, notes || null, req.user?.id,
     ]);
@@ -110,6 +167,14 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
       VALUES ($1, $2, $3, 'full', $4)
     `, [sale.id, amountPaid || totalAmount, paymentMethod, req.user?.id]);
 
+    // Record promotion usage
+    if (resolvedPromotionId && promotionDiscount > 0) {
+      await client.query(`
+        INSERT INTO promotion_usages (promotion_id, sale_id, discount_amount, used_by)
+        VALUES ($1, $2, $3, $4)
+      `, [resolvedPromotionId, sale.id, promotionDiscount, req.user?.id]);
+    }
+
     await client.query('COMMIT');
 
     // Get full sale with items for receipt
@@ -128,7 +193,9 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
         saleNumber,
         items: itemDetails,
         subtotal,
-        discountAmount,
+        discountAmount: totalDiscountAmount,
+        promotionDiscount,
+        promotionId: resolvedPromotionId,
         taxAmount,
         totalAmount,
         amountPaid: amountPaid || totalAmount,

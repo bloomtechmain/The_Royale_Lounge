@@ -11,13 +11,15 @@ import { toast } from 'sonner';
 import { productService } from '@/services/productService';
 import { posService } from '@/services/posService';
 import { customerService } from '@/services/customerService';
+import { calculatePromoDiscount } from '@/services/promotionService';
 import { useCartStore } from '@/store/cartStore';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import Drawer from '@/components/common/Drawer';
+import PromotionSelector from '@/components/common/PromotionSelector';
 import { formatCurrency } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
-import type { ProductCategory } from '@/types';
+import type { ProductCategory, Promotion } from '@/types';
 
 export default function POSPage() {
   const qc = useQueryClient();
@@ -35,6 +37,7 @@ export default function POSPage() {
     notes: '',
   });
   const [variantPickerProduct, setVariantPickerProduct] = useState<any | null>(null);
+  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
 
   const barcodeRef = useRef<HTMLInputElement>(null);
   const {
@@ -73,6 +76,7 @@ export default function POSPage() {
       setShowReceipt(true);
       clearCart();
       setCustomer(null, null);
+      setSelectedPromotion(null);
       setMobileTab('products');
       qc.invalidateQueries({ queryKey: ['pos-products'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
@@ -154,7 +158,16 @@ export default function POSPage() {
 
   const subtotal = getSubtotal();
   const discount = parseFloat(checkoutForm.discount || '0');
-  const total = Math.max(0, subtotal - discount - discountAmount);
+  const promoDiscount = selectedPromotion
+    ? calculatePromoDiscount(
+        selectedPromotion,
+        subtotal,
+        cartItems.map(i => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
+        1,
+        'pos'
+      )
+    : 0;
+  const total = Math.max(0, subtotal - discount - discountAmount - promoDiscount);
   const isCash = checkoutForm.paymentMethod === 'cash';
   const amountPaid = isCash ? parseFloat(checkoutForm.amountPaid || String(total)) : total;
   const change = Math.max(0, amountPaid - total);
@@ -169,6 +182,7 @@ export default function POSPage() {
         discount: item.discount,
       })),
       discountAmount: discount + discountAmount,
+      promotionId: selectedPromotion?.id ?? null,
       paymentMethod: checkoutForm.paymentMethod,
       amountPaid,
       notes: checkoutForm.notes,
@@ -483,6 +497,14 @@ export default function POSPage() {
               />
             </div>
 
+            <PromotionSelector
+              scope="pos"
+              cartSubtotal={subtotal}
+              cartItems={cartItems.map(i => ({ unitPrice: i.unitPrice, quantity: i.quantity }))}
+              selectedId={selectedPromotion?.id ?? null}
+              onSelect={setSelectedPromotion}
+            />
+
             <Button
               variant="primary"
              
@@ -600,6 +622,12 @@ export default function POSPage() {
             <div className="flex justify-between"><span className="text-charcoal-200">Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
             {discountAmount > 0 && <div className="flex justify-between text-emerald-400"><span>Discount</span><span>-{formatCurrency(discountAmount)}</span></div>}
             {checkoutForm.discount && <div className="flex justify-between text-emerald-400"><span>Extra Discount</span><span>-{formatCurrency(parseFloat(checkoutForm.discount))}</span></div>}
+            {promoDiscount > 0 && selectedPromotion && (
+              <div className="flex justify-between text-emerald-400">
+                <span>Promotion ({selectedPromotion.name})</span>
+                <span>-{formatCurrency(promoDiscount)}</span>
+              </div>
+            )}
             <div className="flex justify-between font-bold text-base pt-1 border-t border-charcoal-500">
               <span>Total</span>
               <span className="text-gold-400">{formatCurrency(total)}</span>
@@ -677,6 +705,7 @@ export default function POSPage() {
 
             <div className="space-y-1.5 pt-3 border-t border-charcoal-500 text-sm">
               <div className="flex justify-between"><span className="text-charcoal-200">Subtotal</span><span>{formatCurrency(receipt.subtotal)}</span></div>
+              {receipt.promotionDiscount > 0 && <div className="flex justify-between text-emerald-400"><span>Promotion</span><span>-{formatCurrency(receipt.promotionDiscount)}</span></div>}
               {receipt.discountAmount > 0 && <div className="flex justify-between text-emerald-400"><span>Discount</span><span>-{formatCurrency(receipt.discountAmount)}</span></div>}
               <div className="flex justify-between font-bold text-base">
                 <span>Total</span>

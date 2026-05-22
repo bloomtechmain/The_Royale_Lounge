@@ -19,6 +19,7 @@ import notificationsRoutes from './routes/notifications';
 import permissionsRoutes from './routes/permissions';
 import analyticsRoutes from './routes/analytics';
 import hrRoutes from './routes/hr';
+import promotionsRoutes from './routes/promotions';
 
 const app = express();
 
@@ -55,6 +56,7 @@ app.use('/api/notifications', notificationsRoutes);
 app.use('/api/permissions', permissionsRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/hr', hrRoutes);
+app.use('/api/promotions', promotionsRoutes);
 
 // ─── Serve React client in production ────────────────────────────────────────
 if (env.NODE_ENV === 'production') {

@@ -22,6 +22,7 @@ import AnalyticsPage from './pages/analytics/AnalyticsPage';
 import ExpensesPage from './pages/expenses/ExpensesPage';
 import EmployeesPage from './pages/employees/EmployeesPage';
 import PayrollPage from './pages/payroll/PayrollPage';
+import PromotionsPage from './pages/promotions/PromotionsPage';
 
 export default function App() {
   const { token } = useAuthStore();
@@ -51,6 +52,7 @@ export default function App() {
 
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/returns" element={<ReturnsPage />} />
+          <Route path="/promotions" element={<PromotionsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/expenses" element={<ExpensesPage />} />

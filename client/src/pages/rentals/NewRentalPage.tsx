@@ -7,13 +7,15 @@ import { toast } from 'sonner';
 import { rentalService } from '@/services/rentalService';
 import { customerService } from '@/services/customerService';
 import { productService } from '@/services/productService';
+import { calculatePromoDiscount } from '@/services/promotionService';
 import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
 import Textarea from '@/components/common/Textarea';
+import PromotionSelector from '@/components/common/PromotionSelector';
 import { formatCurrency, getDaysDiff } from '@/utils/formatters';
-import type { Customer, ProductVariant } from '@/types';
+import type { Customer, ProductVariant, Promotion } from '@/types';
 
 const STEPS = ['Customer', 'Items', 'Dates', 'Payment', 'Confirm'];
 
@@ -49,6 +51,8 @@ export default function NewRentalPage() {
 
   const [advancePayment, setAdvancePayment] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [manualDiscount, setManualDiscount] = useState('');
+  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
 
   const { data: customerResults } = useQuery({
     queryKey: ['customer-search', customerSearch],
@@ -84,6 +88,18 @@ export default function NewRentalPage() {
 
   const totalCost = cartItems.reduce((sum, item) => sum + item.rentalPricePerDay * item.quantity * rentalDays, 0);
 
+  const promoDiscount = selectedPromotion
+    ? calculatePromoDiscount(
+        selectedPromotion,
+        totalCost,
+        cartItems.map(i => ({ unitPrice: i.rentalPricePerDay, quantity: i.quantity })),
+        rentalDays,
+        'rental'
+      )
+    : 0;
+  const manualDiscountAmt = parseFloat(manualDiscount || '0');
+  const finalTotal = Math.max(0, totalCost - manualDiscountAmt - promoDiscount);
+
   const addToCart = (variant: any, productName: string) => {
     const existing = cartItems.find((i) => i.variantId === variant.id);
     if (existing) {
@@ -115,6 +131,8 @@ export default function NewRentalPage() {
         rentalPricePerDay: i.rentalPricePerDay,
       })),
       advancePayment: parseFloat(advancePayment || '0'),
+      discountAmount: manualDiscountAmt,
+      promotionId: selectedPromotion?.id ?? null,
       eventType,
       notes,
       paymentMethod,
@@ -353,6 +371,24 @@ export default function NewRentalPage() {
                   <span className="text-charcoal-200">Total Rental Cost:</span>
                   <span className="text-charcoal-50 font-medium">{formatCurrency(totalCost)}</span>
                 </div>
+                {manualDiscountAmt > 0 && (
+                  <div className="flex justify-between text-sm text-emerald-400">
+                    <span>Manual Discount:</span>
+                    <span>-{formatCurrency(manualDiscountAmt)}</span>
+                  </div>
+                )}
+                {promoDiscount > 0 && selectedPromotion && (
+                  <div className="flex justify-between text-sm text-emerald-400">
+                    <span>Promotion ({selectedPromotion.name}):</span>
+                    <span>-{formatCurrency(promoDiscount)}</span>
+                  </div>
+                )}
+                {(manualDiscountAmt > 0 || promoDiscount > 0) && (
+                  <div className="flex justify-between text-sm font-bold pt-1 border-t border-charcoal-500">
+                    <span className="text-charcoal-100">Net Total:</span>
+                    <span className="text-gold-400">{formatCurrency(finalTotal)}</span>
+                  </div>
+                )}
               </div>
 
               <Select
@@ -367,6 +403,24 @@ export default function NewRentalPage() {
                 onChange={(e) => setPaymentMethod(e.target.value)}
               />
               <Input label="Advance Payment (LKR)" type="number" step="0.01" min="0" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} placeholder="0.00" hint="Amount paid upfront now" />
+              <Input
+                label="Manual Discount (LKR)"
+                type="number"
+                step="0.01"
+                min="0"
+                value={manualDiscount}
+                onChange={(e) => setManualDiscount(e.target.value)}
+                placeholder="0.00"
+                hint="Optional cashier-applied discount"
+              />
+              <PromotionSelector
+                scope="rental"
+                cartSubtotal={totalCost}
+                cartItems={cartItems.map(i => ({ unitPrice: i.rentalPricePerDay, quantity: i.quantity }))}
+                rentalDays={rentalDays}
+                selectedId={selectedPromotion?.id ?? null}
+                onSelect={setSelectedPromotion}
+              />
             </motion.div>
           )}
 
@@ -384,9 +438,11 @@ export default function NewRentalPage() {
                     { label: 'Duration', value: `${rentalDays} day(s)` },
                     { label: 'Event', value: eventType || '—' },
                     { label: 'Items', value: `${cartItems.length} item(s)` },
-                    { label: 'Total Cost', value: formatCurrency(totalCost) },
+                    { label: 'Rental Cost', value: formatCurrency(totalCost) },
+                    ...(promoDiscount > 0 || manualDiscountAmt > 0 ? [{ label: 'Net Total', value: formatCurrency(finalTotal) }] : []),
+                    ...(selectedPromotion ? [{ label: 'Promotion', value: selectedPromotion.name }] : []),
                     { label: 'Advance Paid', value: formatCurrency(parseFloat(advancePayment || '0')) },
-                    { label: 'Balance Due', value: formatCurrency(Math.max(0, totalCost - parseFloat(advancePayment || '0'))) },
+                    { label: 'Balance Due', value: formatCurrency(Math.max(0, finalTotal - parseFloat(advancePayment || '0'))) },
                     { label: 'Payment Method', value: paymentMethod },
                   ].map(({ label, value }) => (
                     <div key={label} className="p-3 bg-charcoal-600/50 rounded-xl">
@@ -513,9 +569,21 @@ export default function NewRentalPage() {
               <p className="text-xs text-charcoal-300 uppercase tracking-wide mb-2 flex items-center gap-1.5"><CreditCard size={11} />Payment</p>
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-charcoal-400">Total Cost</span>
+                  <span className="text-charcoal-400">Rental Cost</span>
                   <span className="text-gold-400 font-semibold">{formatCurrency(totalCost)}</span>
                 </div>
+                {(promoDiscount > 0 || manualDiscountAmt > 0) && (
+                  <div className="flex justify-between text-xs text-emerald-400">
+                    <span>Discount</span>
+                    <span>-{formatCurrency(promoDiscount + manualDiscountAmt)}</span>
+                  </div>
+                )}
+                {(promoDiscount > 0 || manualDiscountAmt > 0) && (
+                  <div className="flex justify-between text-xs font-semibold pt-1 border-t border-charcoal-600">
+                    <span className="text-charcoal-200">Net Total</span>
+                    <span className="text-gold-400">{formatCurrency(finalTotal)}</span>
+                  </div>
+                )}
                 {advancePayment && parseFloat(advancePayment) > 0 && (
                   <>
                     <div className="flex justify-between text-xs">
@@ -524,7 +592,7 @@ export default function NewRentalPage() {
                     </div>
                     <div className="flex justify-between text-xs pt-1 border-t border-charcoal-600">
                       <span className="text-charcoal-200 font-medium">Balance Due</span>
-                      <span className="text-charcoal-50 font-semibold">{formatCurrency(Math.max(0, totalCost - parseFloat(advancePayment)))}</span>
+                      <span className="text-charcoal-50 font-semibold">{formatCurrency(Math.max(0, finalTotal - parseFloat(advancePayment)))}</span>
                     </div>
                   </>
                 )}

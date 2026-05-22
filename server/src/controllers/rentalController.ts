@@ -129,6 +129,7 @@ export async function createRental(req: AuthRequest, res: Response): Promise<voi
     customerId, rentalStartDate, rentalEndDate,
     items, advancePayment,
     discountAmount, notes, eventType, paymentMethod,
+    promotionId,
   } = req.body;
 
   if (!customerId || !rentalStartDate || !rentalEndDate || !items?.length) {
@@ -164,6 +165,65 @@ export async function createRental(req: AuthRequest, res: Response): Promise<voi
       totalCost += pricePerDay * item.quantity * days;
     }
 
+    // ── Promotion resolution ────────────────────────────────────────────────
+    let promotionDiscount = 0;
+    let resolvedPromotionId: string | null = null;
+
+    if (promotionId) {
+      const promoRes = await client.query(`
+        SELECT * FROM promotions
+        WHERE id = $1
+          AND is_active = true
+          AND CURRENT_DATE BETWEEN start_date AND end_date
+          AND (scope = 'rental' OR scope = 'both')
+          AND (max_usage_count IS NULL OR usage_count < max_usage_count)
+        FOR UPDATE
+      `, [promotionId]);
+
+      if (!promoRes.rows[0]) throw new Error('Selected promotion is no longer valid.');
+      const promo = promoRes.rows[0];
+
+      if (promo.min_order_amount && totalCost < promo.min_order_amount) {
+        throw new Error(`Rental total must be at least LKR ${promo.min_order_amount} for this promotion.`);
+      }
+
+      if (promo.type === 'percentage') {
+        promotionDiscount = totalCost * (parseFloat(promo.percentage_value) / 100);
+      } else if (promo.type === 'flat_amount') {
+        promotionDiscount = Math.min(parseFloat(promo.flat_amount_value), totalCost);
+      } else if (promo.type === 'buy_x_get_y') {
+        const totalQty = items.reduce((s: number, i: any) => s + (i.quantity || 1), 0);
+        if (totalQty >= promo.buy_quantity) {
+          const cheapestDailyRate = Math.min(
+            ...items.map((i: any) => parseFloat(i.rentalPricePerDay || 0))
+          );
+          promotionDiscount = promo.get_quantity * cheapestDailyRate * days;
+        }
+      } else if (promo.type === 'free_item') {
+        const fvRes = await client.query(
+          `SELECT rental_price_per_day FROM product_variants WHERE id = $1`,
+          [promo.free_variant_id]
+        );
+        if (fvRes.rows[0]) {
+          promotionDiscount = parseFloat(fvRes.rows[0].rental_price_per_day || '0') * days;
+        }
+      }
+
+      promotionDiscount = Math.max(0, Math.min(promotionDiscount, totalCost));
+      resolvedPromotionId = promotionId;
+
+      await client.query(
+        `UPDATE promotions SET usage_count = usage_count + 1, updated_at = NOW() WHERE id = $1`,
+        [promotionId]
+      );
+      await client.query(`
+        UPDATE promotions SET is_active = false, updated_at = NOW()
+        WHERE id = $1 AND max_usage_count IS NOT NULL AND usage_count >= max_usage_count
+      `, [promotionId]);
+    }
+
+    const totalDiscountAmount = (discountAmount || 0) + promotionDiscount;
+
     const rentalRes = await client.query(`
       INSERT INTO rentals (
         booking_number, customer_id, status, rental_start_date, rental_end_date,
@@ -174,7 +234,7 @@ export async function createRental(req: AuthRequest, res: Response): Promise<voi
     `, [
       bookingNumber, customerId, rentalStartDate, rentalEndDate,
       advancePayment || 0, totalCost,
-      discountAmount || 0, notes || null, eventType || null, req.user?.id,
+      totalDiscountAmount, notes || null, eventType || null, req.user?.id,
     ]);
 
     const rental = rentalRes.rows[0];
@@ -215,6 +275,14 @@ export async function createRental(req: AuthRequest, res: Response): Promise<voi
         INSERT INTO payments (rental_id, amount, payment_method, payment_type, created_by)
         VALUES ($1, $2, $3, 'advance', $4)
       `, [rental.id, advancePayment, paymentMethod || 'cash', req.user?.id]);
+    }
+
+    // Record promotion usage
+    if (resolvedPromotionId && promotionDiscount > 0) {
+      await client.query(`
+        INSERT INTO promotion_usages (promotion_id, rental_id, discount_amount, used_by)
+        VALUES ($1, $2, $3, $4)
+      `, [resolvedPromotionId, rental.id, promotionDiscount, req.user?.id]);
     }
 
     await client.query('COMMIT');
