@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings as SettingsIcon, Users, Store, Bell, DollarSign, Shield, Plus, Pencil, Trash2, RefreshCw, Check, Minus } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Store, Bell, DollarSign, Shield, Plus, Pencil, Trash2, RefreshCw, Check, Minus, MessageCircle, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { settingsService } from '@/services/settingsService';
 import { permissionsService } from '@/services/permissionsService';
@@ -388,6 +388,57 @@ function NotificationSettings({ settings, onSave, saving }: { settings: any; onS
               </button>
             </div>
           ))}
+        </div>
+      </Card>
+
+      <Card>
+        <h4 className="text-base font-semibold text-charcoal-50 mb-1">WhatsApp Integration</h4>
+        <p className="text-xs text-charcoal-200 mb-5">
+          Connect your WhatsApp to send invoices and receipts directly to customers.
+        </p>
+        <div className="space-y-4">
+          <Input
+            label="Shop WhatsApp Number"
+            value={get('whatsapp_business_number')}
+            onChange={(e) => set('whatsapp_business_number', e.target.value)}
+            placeholder="+94XXXXXXXXXX"
+            hint="Your shop's WhatsApp number — displayed in invoice messages"
+          />
+          <div>
+            <p className="text-sm font-medium text-charcoal-100 mb-2">Invoice Sending Mode</p>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                {
+                  value: 'wame',
+                  icon: MessageCircle,
+                  label: 'Open WhatsApp',
+                  desc: 'Opens WhatsApp app with pre-filled message. Works with any number — no API needed.',
+                },
+                {
+                  value: 'fitsms',
+                  icon: Zap,
+                  label: 'Auto Send (FitSMS)',
+                  desc: 'Sends automatically via FitSMS API. Requires FitSMS WhatsApp to be configured.',
+                },
+              ].map(({ value, icon: Icon, label, desc }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => set('whatsapp_mode', value)}
+                  className={cn(
+                    'flex flex-col items-start gap-2 p-4 rounded-xl border-2 text-left transition-all',
+                    get('whatsapp_mode', 'wame') === value
+                      ? 'border-gold-500 bg-gold-700/15'
+                      : 'border-charcoal-500 hover:border-charcoal-400'
+                  )}
+                >
+                  <Icon size={18} className={get('whatsapp_mode', 'wame') === value ? 'text-gold-400' : 'text-charcoal-300'} />
+                  <p className={cn('text-sm font-medium', get('whatsapp_mode', 'wame') === value ? 'text-gold-400' : 'text-charcoal-100')}>{label}</p>
+                  <p className="text-xs text-charcoal-300 leading-relaxed">{desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </Card>
 

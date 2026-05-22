@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { db } from '../config/database';
-import { sendNotification } from '../services/notificationService';
+import { sendNotification, buildPOSInvoiceText, buildRentalInvoiceText, getWaLink } from '../services/notificationService';
 import { AuthRequest } from '../middleware/auth';
 
 // ─── FitSMS Delivery Report Webhook ─────────────────────────────────────────
@@ -98,6 +98,94 @@ export async function getNotificationLogs(req: Request, res: Response): Promise<
     });
   } catch (err: any) {
     console.error('getNotificationLogs error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function sendInvoice(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { type, referenceId, channel } = req.body; // type: 'pos'|'rental', channel: 'whatsapp'|'sms'
+
+    if (!type || !referenceId || !channel) {
+      res.status(400).json({ error: 'type, referenceId, and channel are required' });
+      return;
+    }
+
+    // Get WhatsApp mode from settings
+    const settingsRes = await db.query(
+      `SELECT key, value FROM settings WHERE key IN ('whatsapp_mode', 'whatsapp_business_number')`
+    );
+    const sMap: Record<string, string> = {};
+    for (const row of settingsRes.rows) sMap[row.key] = row.value;
+    const waMode = sMap['whatsapp_mode'] || 'wame';
+
+    // Get customer phone based on type
+    let phone: string | null = null;
+    let customerId: string | null = null;
+    let rentalIdForLog: string | undefined;
+
+    if (type === 'pos') {
+      const saleRes = await db.query(
+        `SELECT s.customer_id, c.phone, c.whatsapp
+         FROM sales s
+         LEFT JOIN customers c ON c.id = s.customer_id
+         WHERE s.id = $1`,
+        [referenceId]
+      );
+      if (!saleRes.rows[0]) { res.status(404).json({ error: 'Sale not found' }); return; }
+      const sale = saleRes.rows[0];
+      customerId = sale.customer_id;
+      phone = channel === 'whatsapp' ? (sale.whatsapp || sale.phone) : sale.phone;
+    } else if (type === 'rental') {
+      const rentRes = await db.query(
+        `SELECT r.customer_id, c.phone, c.whatsapp
+         FROM rentals r
+         LEFT JOIN customers c ON c.id = r.customer_id
+         WHERE r.id = $1`,
+        [referenceId]
+      );
+      if (!rentRes.rows[0]) { res.status(404).json({ error: 'Rental not found' }); return; }
+      const rental = rentRes.rows[0];
+      customerId = rental.customer_id;
+      phone = channel === 'whatsapp' ? (rental.whatsapp || rental.phone) : rental.phone;
+      rentalIdForLog = referenceId;
+    } else {
+      res.status(400).json({ error: 'type must be pos or rental' });
+      return;
+    }
+
+    if (!phone) {
+      res.status(400).json({ error: `Customer has no ${channel === 'whatsapp' ? 'WhatsApp/phone' : 'phone'} number` });
+      return;
+    }
+
+    // Build invoice message
+    const message = type === 'pos'
+      ? await buildPOSInvoiceText(referenceId)
+      : await buildRentalInvoiceText(referenceId);
+
+    // WhatsApp wa.me mode — return link for client to open
+    if (channel === 'whatsapp' && waMode === 'wame') {
+      const waLink = await getWaLink(phone, message);
+      res.json({ waLink, message });
+      return;
+    }
+
+    // FitSMS / SMS mode — send automatically
+    if (customerId) {
+      await sendNotification({
+        rentalId: rentalIdForLog,
+        customerId,
+        type: `${type}_invoice`,
+        channel,
+        recipient: phone,
+        message,
+      });
+    }
+
+    res.json({ sent: true, message });
+  } catch (err: any) {
+    console.error('sendInvoice error:', err);
     res.status(500).json({ error: err.message });
   }
 }

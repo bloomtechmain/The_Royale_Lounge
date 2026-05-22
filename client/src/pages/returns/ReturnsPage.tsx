@@ -2,8 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { RotateCcw, AlertTriangle, CheckCircle, Package, Clock, XCircle, Banknote, CreditCard, Smartphone, Building2 } from 'lucide-react';
+import { RotateCcw, AlertTriangle, CheckCircle, Package, Clock, XCircle, Banknote, CreditCard, Smartphone, Building2, MessageCircle, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import api from '@/services/api';
 import { returnService } from '@/services/returnService';
 import { rentalService } from '@/services/rentalService';
 import { settingsService } from '@/services/settingsService';
@@ -63,6 +64,8 @@ export default function ReturnsPage() {
   const [itemRemarks, setItemRemarks] = useState<Record<string, string>>({});
   const [fineCalc, setFineCalc] = useState<any>(null);
   const [collectFine, setCollectFine] = useState(true);
+  const [sendInvoiceRentalId, setSendInvoiceRentalId] = useState<string | null>(null);
+  const [sendingInvoice, setSendingInvoice] = useState<'whatsapp' | 'sms' | null>(null);
 
   // ── data ──────────────────────────────────────────────────────────────────
   const { data: pendingReturns, isLoading } = useQuery({
@@ -92,12 +95,13 @@ export default function ReturnsPage() {
   const processReturnMutation = useMutation({
     mutationFn: ({ rentalId, payload }: { rentalId: string; payload: any }) =>
       returnService.processReturn(rentalId, payload),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       toast.success('Return processed successfully!');
       if (data.fine?.totalFine > 0)
         toast.warning(`Late fine collected: ${formatCurrency(data.fine.totalFine)}`);
       if (data.totalDamageCharge > 0)
         toast.warning(`Damage / loss charge collected: ${formatCurrency(data.totalDamageCharge)}`);
+      setSendInvoiceRentalId(variables.rentalId);
       setShowReturnModal(false);
       setSelectedRental(null);
       qc.invalidateQueries({ queryKey: ['pending-returns'] });
@@ -105,6 +109,25 @@ export default function ReturnsPage() {
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to process return'),
   });
+
+  const handleSendReturnInvoice = async (channel: 'whatsapp' | 'sms') => {
+    if (!sendInvoiceRentalId) return;
+    setSendingInvoice(channel);
+    try {
+      const res = await api.post('/notifications/send-invoice', {
+        type: 'rental', referenceId: sendInvoiceRentalId, channel,
+      });
+      if (res.data.waLink) {
+        window.open(res.data.waLink, '_blank');
+      } else {
+        toast.success('Invoice sent via SMS!');
+      }
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || 'Failed to send invoice');
+    } finally {
+      setSendingInvoice(null);
+    }
+  };
 
   // ── open modal ────────────────────────────────────────────────────────────
   const openReturnModal = async (rental: any) => {
@@ -565,6 +588,55 @@ export default function ReturnsPage() {
             </div>
           )}
 
+        </div>
+      </Drawer>
+
+      {/* ── Send Return Invoice ───────────────────────────────────────────── */}
+      <Drawer
+        open={!!sendInvoiceRentalId}
+        onClose={() => setSendInvoiceRentalId(null)}
+        title="Send Return Receipt"
+      >
+        <div className="space-y-5">
+          <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+            <CheckCircle size={20} className="text-emerald-400 flex-shrink-0" />
+            <p className="text-sm text-emerald-300">Return processed successfully! Send a receipt to the customer?</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => handleSendReturnInvoice('whatsapp')}
+              disabled={!!sendingInvoice}
+              className={cn(
+                'flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all',
+                'border-charcoal-500 hover:border-green-500/60 hover:bg-green-500/10',
+                sendingInvoice === 'whatsapp' && 'opacity-60 cursor-wait'
+              )}
+            >
+              <MessageCircle size={28} className="text-green-400" />
+              <div className="text-center">
+                <p className="font-medium text-charcoal-50">WhatsApp</p>
+                <p className="text-xs text-charcoal-300 mt-0.5">Opens WhatsApp with invoice</p>
+              </div>
+            </button>
+            <button
+              onClick={() => handleSendReturnInvoice('sms')}
+              disabled={!!sendingInvoice}
+              className={cn(
+                'flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all',
+                'border-charcoal-500 hover:border-blue-500/60 hover:bg-blue-500/10',
+                sendingInvoice === 'sms' && 'opacity-60 cursor-wait'
+              )}
+            >
+              <MessageSquare size={28} className="text-blue-400" />
+              <div className="text-center">
+                <p className="font-medium text-charcoal-50">SMS</p>
+                <p className="text-xs text-charcoal-300 mt-0.5">Send via FitSMS</p>
+              </div>
+            </button>
+          </div>
+          <Button variant="secondary" className="w-full" onClick={() => setSendInvoiceRentalId(null)}>
+            Skip
+          </Button>
         </div>
       </Drawer>
     </div>

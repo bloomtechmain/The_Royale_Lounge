@@ -190,6 +190,8 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
       sale,
       items: itemDetails,
       receipt: {
+        saleId: sale.id,
+        customerId: customerId || null,
         saleNumber,
         items: itemDetails,
         subtotal,

@@ -178,6 +178,127 @@ function getEmailSubject(type: string): string {
   return subjects[type] || 'Notification from The Outfit Lounge';
 }
 
+// ─── Invoice Text Builders ────────────────────────────────────────────────────
+
+async function getShopName(): Promise<string> {
+  const r = await db.query(`SELECT value FROM settings WHERE key = 'shop_name'`);
+  return r.rows[0]?.value || 'The Outfit Lounge';
+}
+
+export async function buildPOSInvoiceText(saleId: string): Promise<string> {
+  const shop = await getShopName();
+  const res = await db.query(`
+    SELECT s.sale_number, s.subtotal, s.discount_amount, s.tax_amount,
+           s.total_amount, s.amount_paid, s.change_amount, s.payment_method,
+           s.created_at,
+           si.product_name, si.variant_info, si.quantity, si.unit_price, si.discount, si.subtotal AS item_subtotal
+    FROM sales s
+    JOIN sale_items si ON si.sale_id = s.id
+    WHERE s.id = $1
+    ORDER BY si.rowid
+  `, [saleId]).catch(async () => {
+    // fallback without rowid (PostgreSQL doesn't have rowid)
+    return db.query(`
+      SELECT s.sale_number, s.subtotal, s.discount_amount, s.tax_amount,
+             s.total_amount, s.amount_paid, s.change_amount, s.payment_method,
+             s.created_at,
+             si.product_name, si.variant_info, si.quantity, si.unit_price, si.discount, si.subtotal AS item_subtotal
+      FROM sales s
+      JOIN sale_items si ON si.sale_id = s.id
+      WHERE s.id = $1
+    `, [saleId]);
+  });
+
+  if (!res.rows.length) throw new Error('Sale not found');
+  const sale = res.rows[0];
+  const date = new Date(sale.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  const PAY_LABELS: Record<string, string> = {
+    cash: 'Cash', card: 'Card', mobile_payment: 'Mobile Pay', bank_transfer: 'Bank Transfer', mixed: 'Mixed',
+  };
+
+  let msg = `🧾 *Receipt — ${shop}*\n`;
+  msg += `────────────────────\n`;
+  msg += `Sale #: ${sale.sale_number}\n`;
+  msg += `Date: ${date}\n\n`;
+  msg += `*Items:*\n`;
+  for (const row of res.rows) {
+    const variant = row.variant_info ? ` (${row.variant_info})` : '';
+    msg += `• ${row.product_name}${variant} ×${row.quantity}   LKR ${parseFloat(row.item_subtotal).toFixed(2)}\n`;
+  }
+  msg += `────────────────────\n`;
+  if (parseFloat(sale.discount_amount) > 0)
+    msg += `Discount:  -LKR ${parseFloat(sale.discount_amount).toFixed(2)}\n`;
+  if (parseFloat(sale.tax_amount) > 0)
+    msg += `Tax:        LKR ${parseFloat(sale.tax_amount).toFixed(2)}\n`;
+  msg += `*Total:     LKR ${parseFloat(sale.total_amount).toFixed(2)}*\n`;
+  msg += `Paid:       LKR ${parseFloat(sale.amount_paid).toFixed(2)}\n`;
+  if (parseFloat(sale.change_amount) > 0)
+    msg += `Change:     LKR ${parseFloat(sale.change_amount).toFixed(2)}\n`;
+  msg += `Payment:    ${PAY_LABELS[sale.payment_method] || sale.payment_method}\n`;
+  msg += `────────────────────\n`;
+  msg += `Thank you for your purchase! 🙏`;
+  return msg;
+}
+
+export async function buildRentalInvoiceText(rentalId: string): Promise<string> {
+  const shop = await getShopName();
+  const res = await db.query(`
+    SELECT r.booking_number, r.rental_start_date, r.rental_end_date,
+           r.total_rental_cost, r.discount_amount, r.advance_payment,
+           r.total_fine, r.event_type, r.status,
+           c.name AS customer_name,
+           p.name AS product_name, pv.size, pv.color,
+           ri.quantity, ri.rental_price_per_day
+    FROM rentals r
+    JOIN customers c ON c.id = r.customer_id
+    LEFT JOIN rental_items ri ON ri.rental_id = r.id
+    LEFT JOIN product_variants pv ON pv.id = ri.product_variant_id
+    LEFT JOIN products p ON p.id = pv.product_id
+    WHERE r.id = $1
+  `, [rentalId]);
+
+  if (!res.rows.length) throw new Error('Rental not found');
+  const r = res.rows[0];
+  const startDate = new Date(r.rental_start_date);
+  const endDate   = new Date(r.rental_end_date);
+  const days = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000));
+  const fmt = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  let msg = `📋 *Rental Invoice — ${shop}*\n`;
+  msg += `────────────────────\n`;
+  msg += `Booking: ${r.booking_number}\n`;
+  msg += `Customer: ${r.customer_name}\n`;
+  if (r.event_type) msg += `Event: ${r.event_type}\n`;
+  msg += `\n*Items:*\n`;
+  for (const row of res.rows) {
+    if (!row.product_name) continue;
+    const variant = [row.size, row.color].filter(Boolean).join('/');
+    msg += `• ${row.product_name}${variant ? ` (${variant})` : ''} ×${row.quantity}\n`;
+    msg += `  LKR ${parseFloat(row.rental_price_per_day).toFixed(2)}/day × ${days} days\n`;
+  }
+  msg += `────────────────────\n`;
+  msg += `Period: ${fmt(startDate)} – ${fmt(endDate)}\n`;
+  msg += `Rental Total:  LKR ${parseFloat(r.total_rental_cost).toFixed(2)}\n`;
+  if (parseFloat(r.discount_amount || '0') > 0)
+    msg += `Discount:     -LKR ${parseFloat(r.discount_amount).toFixed(2)}\n`;
+  if (parseFloat(r.advance_payment || '0') > 0)
+    msg += `Advance Paid:  LKR ${parseFloat(r.advance_payment).toFixed(2)}\n`;
+  const balance = parseFloat(r.total_rental_cost) - parseFloat(r.discount_amount || '0') - parseFloat(r.advance_payment || '0');
+  if (balance > 0) msg += `*Balance Due:  LKR ${balance.toFixed(2)}*\n`;
+  if (parseFloat(r.total_fine || '0') > 0)
+    msg += `Late Fine:     LKR ${parseFloat(r.total_fine).toFixed(2)}\n`;
+  msg += `────────────────────\n`;
+  msg += `Thank you for choosing ${shop}! 🙏`;
+  return msg;
+}
+
+export async function getWaLink(phone: string, message: string): Promise<string> {
+  const clean = phone.replace(/[\s\-()]/g, '');
+  const normalised = clean.startsWith('0') ? '+94' + clean.slice(1) : clean.startsWith('+') ? clean : '+' + clean;
+  return `https://wa.me/${normalised.replace('+', '')}?text=${encodeURIComponent(message)}`;
+}
+
 // ─── Message Templates ────────────────────────────────────────────────────────
 
 const SHOP = 'The Outfit Lounge';

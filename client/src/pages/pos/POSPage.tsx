@@ -6,9 +6,10 @@ import {
   Search, Barcode, ShoppingCart, Plus, Minus, Trash2,
   Package, X, Printer, CheckCircle, Tag, User,
   Banknote, CreditCard, Smartphone, Building2, ChevronLeft,
-  StickyNote,
+  StickyNote, MessageCircle, MessageSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import api from '@/services/api';
 import { productService } from '@/services/productService';
 import { posService } from '@/services/posService';
 import { customerService } from '@/services/customerService';
@@ -45,6 +46,7 @@ export default function POSPage() {
   const [showNotes, setShowNotes] = useState(false);
   const [variantPickerProduct, setVariantPickerProduct] = useState<any | null>(null);
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
+  const [sendingInvoice, setSendingInvoice] = useState<'whatsapp' | 'sms' | null>(null);
 
   const barcodeRef = useRef<HTMLInputElement>(null);
   const {
@@ -163,6 +165,25 @@ export default function POSPage() {
   const isCash = paymentMethod === 'cash';
   const paidAmount = isCash ? parseFloat(amountPaid || String(total)) : total;
   const change = Math.max(0, paidAmount - total);
+
+  const handleSendInvoice = async (channel: 'whatsapp' | 'sms') => {
+    if (!receipt?.saleId) return;
+    setSendingInvoice(channel);
+    try {
+      const res = await api.post('/notifications/send-invoice', {
+        type: 'pos', referenceId: receipt.saleId, channel,
+      });
+      if (res.data.waLink) {
+        window.open(res.data.waLink, '_blank');
+      } else {
+        toast.success('Invoice sent via SMS!');
+      }
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || 'Failed to send invoice');
+    } finally {
+      setSendingInvoice(null);
+    }
+  };
 
   const handleCheckout = () => {
     checkoutMutation.mutate({
@@ -753,6 +774,29 @@ export default function POSPage() {
               <div className="flex justify-between"><span className="text-charcoal-200">Paid</span><span>{formatCurrency(receipt.amountPaid)}</span></div>
               {receipt.changeAmount > 0 && <div className="flex justify-between text-emerald-400"><span>Change</span><span>{formatCurrency(receipt.changeAmount)}</span></div>}
             </div>
+            {receipt?.customerId && (
+              <div className="space-y-2 pt-2 border-t border-charcoal-600">
+                <p className="text-xs text-charcoal-300 font-medium">Send Receipt to Customer</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="secondary"
+                    icon={<MessageCircle size={14} />}
+                    onClick={() => handleSendInvoice('whatsapp')}
+                    loading={sendingInvoice === 'whatsapp'}
+                  >
+                    WhatsApp
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    icon={<MessageSquare size={14} />}
+                    onClick={() => handleSendInvoice('sms')}
+                    loading={sendingInvoice === 'sms'}
+                  >
+                    SMS
+                  </Button>
+                </div>
+              </div>
+            )}
             <div className="flex gap-2 pt-2">
               <Button variant="secondary" className="flex-1" icon={<Printer size={14} />} onClick={() => window.print()}>Print</Button>
               <Button variant="primary" className="flex-1" onClick={() => setShowReceipt(false)}>Done</Button>
