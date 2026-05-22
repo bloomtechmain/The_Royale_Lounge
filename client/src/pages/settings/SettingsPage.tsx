@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings as SettingsIcon, Users, Store, Bell, DollarSign, Shield, Plus, Pencil, Trash2, RefreshCw, Check, Minus, MessageCircle, Zap } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Store, Bell, DollarSign, Shield, Plus, Pencil, Trash2, RefreshCw, Check, Minus, MessageCircle, Zap, Cloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { settingsService } from '@/services/settingsService';
 import { permissionsService } from '@/services/permissionsService';
@@ -114,6 +114,7 @@ function ShopSettings({ settings, onSave, saving }: { settings: any; onSave: (u:
     shop_phone: useSetting(settings, 'shop_phone', ''),
     shop_email: useSetting(settings, 'shop_email', ''),
     shop_address: useSetting(settings, 'shop_address', ''),
+    shop_logo: useSetting(settings, 'shop_logo', ''),
     currency: useSetting(settings, 'currency', 'LKR'),
     currency_symbol: useSetting(settings, 'currency_symbol', 'LKR'),
     timezone: useSetting(settings, 'timezone', 'Asia/Colombo'),
@@ -156,6 +157,19 @@ function ShopSettings({ settings, onSave, saving }: { settings: any; onSave: (u:
           </div>
         </div>
         <Input label="Address" value={s('shop_address')} onChange={(e) => setForm({ ...form, shop_address: e.target.value })} placeholder="123 Main Street, Kuala Lumpur" />
+        <Input
+          label="Shop Logo URL"
+          value={s('shop_logo')}
+          onChange={(e) => setForm({ ...form, shop_logo: e.target.value })}
+          placeholder="https://example.com/logo.png"
+          hint="Used in PDF invoices sent via WhatsApp"
+        />
+        {s('shop_logo') && (
+          <div className="flex items-center gap-3 p-3 bg-charcoal-600/40 rounded-xl">
+            <img src={s('shop_logo')} alt="Logo preview" className="h-10 w-auto max-w-[120px] object-contain rounded" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <p className="text-xs text-charcoal-300">Logo preview</p>
+          </div>
+        )}
         <Input label="Receipt Footer Message" value={s('receipt_footer', 'Thank you for your business!')} onChange={(e) => setForm({ ...form, receipt_footer: e.target.value })} placeholder="Thank you for your business!" />
         <div className="flex justify-end pt-2">
           <Button variant="primary" onClick={() => onSave(form)} loading={saving}>Save Changes</Button>
@@ -404,9 +418,16 @@ function NotificationSettings({ settings, onSave, saving }: { settings: any; onS
             placeholder="+94XXXXXXXXXX"
             hint="Your shop's WhatsApp number — displayed in invoice messages"
           />
+          <Input
+            label="App Base URL"
+            value={get('app_base_url')}
+            onChange={(e) => set('app_base_url', e.target.value)}
+            placeholder="https://yourapp.up.railway.app"
+            hint="Public URL of this app — used to generate PDF download links in WhatsApp messages"
+          />
           <div>
             <p className="text-sm font-medium text-charcoal-100 mb-2">Invoice Sending Mode</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
                 {
                   value: 'wame',
@@ -419,6 +440,12 @@ function NotificationSettings({ settings, onSave, saving }: { settings: any; onS
                   icon: Zap,
                   label: 'Auto Send (FitSMS)',
                   desc: 'Sends automatically via FitSMS API. Requires FitSMS WhatsApp to be configured.',
+                },
+                {
+                  value: 'cloud_api',
+                  icon: Cloud,
+                  label: 'WhatsApp Cloud API',
+                  desc: 'Sends PDF invoice as document attachment via Meta WhatsApp Cloud API. Requires Meta Business verification.',
                 },
               ].map(({ value, icon: Icon, label, desc }) => (
                 <button
@@ -439,6 +466,26 @@ function NotificationSettings({ settings, onSave, saving }: { settings: any; onS
               ))}
             </div>
           </div>
+          {get('whatsapp_mode', 'wame') === 'cloud_api' && (
+            <div className="space-y-3 p-4 bg-charcoal-600/30 rounded-xl border border-charcoal-500">
+              <p className="text-xs font-semibold text-gold-400 uppercase tracking-wide">Cloud API Credentials</p>
+              <Input
+                label="Phone Number ID"
+                value={get('whatsapp_cloud_phone_number_id')}
+                onChange={(e) => set('whatsapp_cloud_phone_number_id', e.target.value)}
+                placeholder="1234567890123456"
+                hint="From Meta Business Manager → WhatsApp → API Setup"
+              />
+              <Input
+                label="Access Token"
+                type="password"
+                value={get('whatsapp_cloud_access_token')}
+                onChange={(e) => set('whatsapp_cloud_access_token', e.target.value)}
+                placeholder="EAAxxxxxxxx..."
+                hint="Permanent system user token or temporary test token"
+              />
+            </div>
+          )}
         </div>
       </Card>
 

@@ -20,6 +20,7 @@ import permissionsRoutes from './routes/permissions';
 import analyticsRoutes from './routes/analytics';
 import hrRoutes from './routes/hr';
 import promotionsRoutes from './routes/promotions';
+import invoiceRoutes from './routes/invoices';
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/api/permissions', permissionsRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/hr', hrRoutes);
 app.use('/api/promotions', promotionsRoutes);
+app.use('/api/invoices', invoiceRoutes);  // Public PDF download (no auth)
 
 // ─── Serve React client in production ────────────────────────────────────────
 if (env.NODE_ENV === 'production') {

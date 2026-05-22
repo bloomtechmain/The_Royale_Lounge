@@ -160,6 +160,39 @@ async function sendFitSMS(phone: string, message: string, channel: 'sms' | 'what
   return false;
 }
 
+// ─── WhatsApp Cloud API ───────────────────────────────────────────────────────
+
+export async function sendWhatsAppCloudDoc(params: {
+  to: string;
+  documentUrl: string;
+  filename: string;
+  caption: string;
+  phoneNumberId: string;
+  accessToken: string;
+}): Promise<void> {
+  const { to, documentUrl, filename, caption, phoneNumberId, accessToken } = params;
+
+  let phone = to.replace(/[\s\-()]/g, '');
+  if (phone.startsWith('0')) phone = '+94' + phone.slice(1);
+  if (!phone.startsWith('+')) phone = '+' + phone;
+  const phoneNum = phone.replace('+', '');
+
+  const resp = await fetch(`https://graph.facebook.com/v19.0/${phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to: phoneNum,
+      type: 'document',
+      document: { link: documentUrl, filename, caption },
+    }),
+  });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    throw new Error(`WhatsApp Cloud API ${resp.status}: ${txt}`);
+  }
+}
+
 // ─── Email stub ───────────────────────────────────────────────────────────────
 
 async function sendEmail(to: string, subject: string, body: string): Promise<void> {

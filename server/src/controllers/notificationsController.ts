@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { db } from '../config/database';
-import { sendNotification, buildPOSInvoiceText, buildRentalInvoiceText, getWaLink } from '../services/notificationService';
+import { sendNotification, buildPOSInvoiceText, buildRentalInvoiceText, getWaLink, sendWhatsAppCloudDoc } from '../services/notificationService';
+import { generatePOSInvoicePDF, generateRentalInvoicePDF } from '../services/pdfInvoiceService';
 import { AuthRequest } from '../middleware/auth';
 
 // ─── FitSMS Delivery Report Webhook ─────────────────────────────────────────
@@ -104,54 +105,54 @@ export async function getNotificationLogs(req: Request, res: Response): Promise<
 
 export async function sendInvoice(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const { type, referenceId, channel } = req.body; // type: 'pos'|'rental', channel: 'whatsapp'|'sms'
+    const { type, referenceId, channel } = req.body;
 
     if (!type || !referenceId || !channel) {
       res.status(400).json({ error: 'type, referenceId, and channel are required' });
       return;
     }
 
-    // Get WhatsApp mode from settings
-    const settingsRes = await db.query(
-      `SELECT key, value FROM settings WHERE key IN ('whatsapp_mode', 'whatsapp_business_number')`
-    );
-    const sMap: Record<string, string> = {};
-    for (const row of settingsRes.rows) sMap[row.key] = row.value;
-    const waMode = sMap['whatsapp_mode'] || 'wame';
+    // ── Load settings ──────────────────────────────────────────────────────────
+    const settingsRes = await db.query(`
+      SELECT key, value FROM settings
+      WHERE key IN (
+        'whatsapp_mode','app_base_url',
+        'whatsapp_cloud_phone_number_id','whatsapp_cloud_access_token',
+        'shop_name'
+      )
+    `);
+    const cfg: Record<string, string> = {};
+    for (const r of settingsRes.rows) cfg[r.key] = r.value;
+    const waMode    = cfg['whatsapp_mode'] || 'wame';
+    const baseUrl   = (cfg['app_base_url'] || '').replace(/\/$/, '');
+    const shopName  = cfg['shop_name'] || 'The Royale Lounge';
+    const cloudId   = cfg['whatsapp_cloud_phone_number_id'] || '';
+    const cloudToken= cfg['whatsapp_cloud_access_token'] || '';
 
-    // Get customer phone based on type
+    // ── Resolve customer phone ─────────────────────────────────────────────────
     let phone: string | null = null;
     let customerId: string | null = null;
     let rentalIdForLog: string | undefined;
 
     if (type === 'pos') {
-      const saleRes = await db.query(
-        `SELECT s.customer_id, c.phone, c.whatsapp
-         FROM sales s
-         LEFT JOIN customers c ON c.id = s.customer_id
-         WHERE s.id = $1`,
-        [referenceId]
+      const r = await db.query(
+        `SELECT s.customer_id, c.phone, c.whatsapp FROM sales s
+         LEFT JOIN customers c ON c.id = s.customer_id WHERE s.id = $1`, [referenceId]
       );
-      if (!saleRes.rows[0]) { res.status(404).json({ error: 'Sale not found' }); return; }
-      const sale = saleRes.rows[0];
-      customerId = sale.customer_id;
-      phone = channel === 'whatsapp' ? (sale.whatsapp || sale.phone) : sale.phone;
+      if (!r.rows[0]) { res.status(404).json({ error: 'Sale not found' }); return; }
+      customerId = r.rows[0].customer_id;
+      phone = channel === 'whatsapp' ? (r.rows[0].whatsapp || r.rows[0].phone) : r.rows[0].phone;
     } else if (type === 'rental') {
-      const rentRes = await db.query(
-        `SELECT r.customer_id, c.phone, c.whatsapp
-         FROM rentals r
-         LEFT JOIN customers c ON c.id = r.customer_id
-         WHERE r.id = $1`,
-        [referenceId]
+      const r = await db.query(
+        `SELECT r.customer_id, c.phone, c.whatsapp FROM rentals r
+         LEFT JOIN customers c ON c.id = r.customer_id WHERE r.id = $1`, [referenceId]
       );
-      if (!rentRes.rows[0]) { res.status(404).json({ error: 'Rental not found' }); return; }
-      const rental = rentRes.rows[0];
-      customerId = rental.customer_id;
-      phone = channel === 'whatsapp' ? (rental.whatsapp || rental.phone) : rental.phone;
+      if (!r.rows[0]) { res.status(404).json({ error: 'Rental not found' }); return; }
+      customerId = r.rows[0].customer_id;
+      phone = channel === 'whatsapp' ? (r.rows[0].whatsapp || r.rows[0].phone) : r.rows[0].phone;
       rentalIdForLog = referenceId;
     } else {
-      res.status(400).json({ error: 'type must be pos or rental' });
-      return;
+      res.status(400).json({ error: 'type must be pos or rental' }); return;
     }
 
     if (!phone) {
@@ -159,31 +160,67 @@ export async function sendInvoice(req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    // Build invoice message
-    const message = type === 'pos'
+    // ── Build message text ─────────────────────────────────────────────────────
+    // Compact detail lines only (no emoji banner, no closing line)
+    const detailText = type === 'pos'
       ? await buildPOSInvoiceText(referenceId)
       : await buildRentalInvoiceText(referenceId);
 
-    // WhatsApp wa.me mode — return link for client to open
-    if (channel === 'whatsapp' && waMode === 'wame') {
-      const waLink = await getWaLink(phone, message);
-      res.json({ waLink, message });
+    const fullMessage =
+      `We are pleased to have you as a valuable customer. ` +
+      `Please find the details of your transaction.\n\n` +
+      `${detailText}\n\n` +
+      `Thanks for doing business with us.\n` +
+      `Regards,\n${shopName}`;
+
+    // ── WhatsApp with PDF ──────────────────────────────────────────────────────
+    if (channel === 'whatsapp') {
+      // Generate PDF
+      const token = type === 'pos'
+        ? await generatePOSInvoicePDF(referenceId)
+        : await generateRentalInvoicePDF(referenceId);
+      const pdfUrl = baseUrl ? `${baseUrl}/api/invoices/download/${token}` : null;
+
+      // WhatsApp Cloud API → send PDF as document
+      if (waMode === 'cloud_api' && cloudId && cloudToken && pdfUrl) {
+        await sendWhatsAppCloudDoc({
+          to: phone,
+          documentUrl: pdfUrl,
+          filename: type === 'pos' ? 'Receipt.pdf' : 'RentalInvoice.pdf',
+          caption: fullMessage,
+          phoneNumberId: cloudId,
+          accessToken: cloudToken,
+        });
+        // Log it
+        if (customerId) {
+          await sendNotification({
+            rentalId: rentalIdForLog, customerId,
+            type: `${type}_invoice`, channel: 'whatsapp',
+            recipient: phone, message: fullMessage,
+          }).catch(() => {});
+        }
+        res.json({ sent: true });
+        return;
+      }
+
+      // wa.me mode → return link (with PDF download link appended to message)
+      const msgWithPdf = pdfUrl
+        ? `${fullMessage}\n\n📄 Invoice: ${pdfUrl}`
+        : fullMessage;
+      const waLink = await getWaLink(phone, msgWithPdf);
+      res.json({ waLink, pdfToken: token, pdfUrl });
       return;
     }
 
-    // FitSMS / SMS mode — send automatically
+    // ── SMS ────────────────────────────────────────────────────────────────────
     if (customerId) {
       await sendNotification({
-        rentalId: rentalIdForLog,
-        customerId,
-        type: `${type}_invoice`,
-        channel,
-        recipient: phone,
-        message,
+        rentalId: rentalIdForLog, customerId,
+        type: `${type}_invoice`, channel: 'sms',
+        recipient: phone, message: fullMessage,
       });
     }
-
-    res.json({ sent: true, message });
+    res.json({ sent: true });
   } catch (err: any) {
     console.error('sendInvoice error:', err);
     res.status(500).json({ error: err.message });
