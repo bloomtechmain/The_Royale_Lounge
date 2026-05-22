@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { db } from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { generateSaleNumber } from '../utils/generateSKU';
+import { autoSendWAInvoice } from './notificationsController';
 
 export async function checkout(req: AuthRequest, res: Response): Promise<void> {
   const {
@@ -176,6 +177,20 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
     }
 
     await client.query('COMMIT');
+
+    // Auto-send WhatsApp invoice (fire-and-forget)
+    if (customerId) {
+      db.query(`SELECT value FROM settings WHERE key = 'whatsapp_mode'`).then(async (modeRes) => {
+        if (modeRes.rows[0]?.value === 'qr_scan') {
+          const cRes = await db.query(`SELECT whatsapp, phone FROM customers WHERE id = $1`, [customerId]);
+          const waPhone = cRes.rows[0]?.whatsapp || cRes.rows[0]?.phone;
+          if (waPhone) {
+            autoSendWAInvoice('pos', sale.id, waPhone, customerId)
+              .catch((e: Error) => console.error('[WA Auto] POS invoice:', e.message));
+          }
+        }
+      }).catch(() => {});
+    }
 
     // Get full sale with items for receipt
     const fullSaleRes = await client.query(`

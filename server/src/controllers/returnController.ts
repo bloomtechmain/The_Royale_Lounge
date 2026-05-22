@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { db } from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { calculateFine } from '../services/fineService';
+import { autoSendWAInvoice } from './notificationsController';
 
 export async function getPendingReturns(_req: Request, res: Response): Promise<void> {
   const today = new Date().toISOString().split('T')[0];
@@ -209,6 +210,17 @@ export async function processReturn(req: AuthRequest, res: Response): Promise<vo
     }
 
     await client.query('COMMIT');
+
+    // Auto-send WhatsApp return receipt (fire-and-forget)
+    db.query(`SELECT value FROM settings WHERE key = 'whatsapp_mode'`).then(async (modeRes) => {
+      if (modeRes.rows[0]?.value === 'qr_scan') {
+        const waPhone = rental.whatsapp || rental.phone;
+        if (waPhone && rental.customer_id) {
+          autoSendWAInvoice('rental', rentalId, waPhone, rental.customer_id)
+            .catch((e: Error) => console.error('[WA Auto] Return invoice:', e.message));
+        }
+      }
+    }).catch(() => {});
 
     res.json({
       message: 'Return processed successfully',

@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { env } from './config/env';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import { startScheduler } from './services/schedulerService';
@@ -21,6 +22,7 @@ import analyticsRoutes from './routes/analytics';
 import hrRoutes from './routes/hr';
 import promotionsRoutes from './routes/promotions';
 import invoiceRoutes from './routes/invoices';
+import whatsappRoutes from './routes/whatsapp';
 
 const app = express();
 
@@ -59,6 +61,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/hr', hrRoutes);
 app.use('/api/promotions', promotionsRoutes);
 app.use('/api/invoices', invoiceRoutes);  // Public PDF download (no auth)
+app.use('/api/whatsapp', whatsappRoutes);
 
 // ─── Serve React client in production ────────────────────────────────────────
 if (env.NODE_ENV === 'production') {
@@ -80,6 +83,15 @@ app.listen(env.PORT, () => {
 
   if (env.NODE_ENV !== 'test') {
     startScheduler();
+    // Auto-reconnect WhatsApp if a previous session exists
+    const waAuthDir = process.env.WA_AUTH_DIR || path.join(process.cwd(), 'wa_auth');
+    if (fs.existsSync(path.join(waAuthDir, 'creds.json'))) {
+      import('./services/whatsappService').then(({ connectWhatsApp }) => {
+        connectWhatsApp().catch((e: Error) =>
+          console.error('[WA] Auto-reconnect failed:', e.message)
+        );
+      });
+    }
   }
 });
 

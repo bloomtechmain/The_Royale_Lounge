@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings as SettingsIcon, Users, Store, Bell, DollarSign, Shield, Plus, Pencil, Trash2, RefreshCw, Check, Minus, MessageCircle, Zap, Cloud } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Store, Bell, DollarSign, Shield, Plus, Pencil, Trash2, RefreshCw, Check, Minus, MessageCircle, Zap, Cloud, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { settingsService } from '@/services/settingsService';
 import { permissionsService } from '@/services/permissionsService';
 import type { RolePermissionsMap } from '@/services/permissionsService';
 import Card from '@/components/common/Card';
+import WhatsAppQRCard from '@/components/settings/WhatsAppQRCard';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import Select from '@/components/common/Select';
@@ -408,44 +409,39 @@ function NotificationSettings({ settings, onSave, saving }: { settings: any; onS
       <Card>
         <h4 className="text-base font-semibold text-charcoal-50 mb-1">WhatsApp Integration</h4>
         <p className="text-xs text-charcoal-200 mb-5">
-          Connect your WhatsApp to send invoices and receipts directly to customers.
+          Connect your WhatsApp by scanning a QR code — invoices are sent automatically in the background.
         </p>
-        <div className="space-y-4">
-          <Input
-            label="Shop WhatsApp Number"
-            value={get('whatsapp_business_number')}
-            onChange={(e) => set('whatsapp_business_number', e.target.value)}
-            placeholder="+94XXXXXXXXXX"
-            hint="Your shop's WhatsApp number — displayed in invoice messages"
-          />
-          <Input
-            label="App Base URL"
-            value={get('app_base_url')}
-            onChange={(e) => set('app_base_url', e.target.value)}
-            placeholder="https://yourapp.up.railway.app"
-            hint="Public URL of this app — used to generate PDF download links in WhatsApp messages"
-          />
-          <div>
-            <p className="text-sm font-medium text-charcoal-100 mb-2">Invoice Sending Mode</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="space-y-5">
+          {/* QR Connection Card — always visible */}
+          <WhatsAppQRCard />
+
+          <div className="border-t border-charcoal-600 pt-4">
+            <p className="text-sm font-medium text-charcoal-100 mb-3">Invoice Sending Mode</p>
+            <div className="grid grid-cols-2 gap-3">
               {[
+                {
+                  value: 'qr_scan',
+                  icon: Smartphone,
+                  label: 'QR Scan — Auto',
+                  desc: 'Connect via QR code above. Invoices sent automatically after every sale and return.',
+                },
                 {
                   value: 'wame',
                   icon: MessageCircle,
                   label: 'Open WhatsApp',
-                  desc: 'Opens WhatsApp app with pre-filled message. Works with any number — no API needed.',
+                  desc: 'Opens WhatsApp app with pre-filled message. Manual — no session needed.',
                 },
                 {
                   value: 'fitsms',
                   icon: Zap,
                   label: 'Auto Send (FitSMS)',
-                  desc: 'Sends automatically via FitSMS API. Requires FitSMS WhatsApp to be configured.',
+                  desc: 'Sends automatically via FitSMS API. Requires FitSMS WhatsApp configured.',
                 },
                 {
                   value: 'cloud_api',
                   icon: Cloud,
-                  label: 'WhatsApp Cloud API',
-                  desc: 'Sends PDF invoice as document attachment via Meta WhatsApp Cloud API. Requires Meta Business verification.',
+                  label: 'Cloud API',
+                  desc: 'Meta WhatsApp Cloud API with PDF. Requires Meta Business verification.',
                 },
               ].map(({ value, icon: Icon, label, desc }) => (
                 <button
@@ -454,38 +450,56 @@ function NotificationSettings({ settings, onSave, saving }: { settings: any; onS
                   onClick={() => set('whatsapp_mode', value)}
                   className={cn(
                     'flex flex-col items-start gap-2 p-4 rounded-xl border-2 text-left transition-all',
-                    get('whatsapp_mode', 'wame') === value
+                    get('whatsapp_mode', 'qr_scan') === value
                       ? 'border-gold-500 bg-gold-700/15'
                       : 'border-charcoal-500 hover:border-charcoal-400'
                   )}
                 >
-                  <Icon size={18} className={get('whatsapp_mode', 'wame') === value ? 'text-gold-400' : 'text-charcoal-300'} />
-                  <p className={cn('text-sm font-medium', get('whatsapp_mode', 'wame') === value ? 'text-gold-400' : 'text-charcoal-100')}>{label}</p>
+                  <Icon size={18} className={get('whatsapp_mode', 'qr_scan') === value ? 'text-gold-400' : 'text-charcoal-300'} />
+                  <p className={cn('text-sm font-medium', get('whatsapp_mode', 'qr_scan') === value ? 'text-gold-400' : 'text-charcoal-100')}>{label}</p>
                   <p className="text-xs text-charcoal-300 leading-relaxed">{desc}</p>
                 </button>
               ))}
             </div>
+
+            {get('whatsapp_mode', 'qr_scan') === 'qr_scan' && (
+              <div className="mt-3 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                <p className="text-xs text-emerald-300">
+                  Invoices are sent automatically — no buttons required in POS or Returns.
+                </p>
+              </div>
+            )}
           </div>
-          {get('whatsapp_mode', 'wame') === 'cloud_api' && (
-            <div className="space-y-3 p-4 bg-charcoal-600/30 rounded-xl border border-charcoal-500">
-              <p className="text-xs font-semibold text-gold-400 uppercase tracking-wide">Cloud API Credentials</p>
-              <Input
-                label="Phone Number ID"
-                value={get('whatsapp_cloud_phone_number_id')}
-                onChange={(e) => set('whatsapp_cloud_phone_number_id', e.target.value)}
-                placeholder="1234567890123456"
-                hint="From Meta Business Manager → WhatsApp → API Setup"
-              />
-              <Input
-                label="Access Token"
-                type="password"
-                value={get('whatsapp_cloud_access_token')}
-                onChange={(e) => set('whatsapp_cloud_access_token', e.target.value)}
-                placeholder="EAAxxxxxxxx..."
-                hint="Permanent system user token or temporary test token"
-              />
-            </div>
-          )}
+
+          <div className="border-t border-charcoal-600 pt-4 space-y-4">
+            <Input
+              label="App Base URL"
+              value={get('app_base_url')}
+              onChange={(e) => set('app_base_url', e.target.value)}
+              placeholder="https://yourapp.up.railway.app"
+              hint="Public URL of this app — used to generate PDF download links (wame mode)"
+            />
+            {get('whatsapp_mode', 'qr_scan') === 'cloud_api' && (
+              <div className="space-y-3 p-4 bg-charcoal-600/30 rounded-xl border border-charcoal-500">
+                <p className="text-xs font-semibold text-gold-400 uppercase tracking-wide">Cloud API Credentials</p>
+                <Input
+                  label="Phone Number ID"
+                  value={get('whatsapp_cloud_phone_number_id')}
+                  onChange={(e) => set('whatsapp_cloud_phone_number_id', e.target.value)}
+                  placeholder="1234567890123456"
+                  hint="From Meta Business Manager → WhatsApp → API Setup"
+                />
+                <Input
+                  label="Access Token"
+                  type="password"
+                  value={get('whatsapp_cloud_access_token')}
+                  onChange={(e) => set('whatsapp_cloud_access_token', e.target.value)}
+                  placeholder="EAAxxxxxxxx..."
+                  hint="Permanent system user token or temporary test token"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </Card>
 

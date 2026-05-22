@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { db } from '../config/database';
 import { sendNotification, buildPOSInvoiceText, buildRentalInvoiceText, getWaLink, sendWhatsAppCloudDoc } from '../services/notificationService';
-import { generatePOSInvoicePDF, generateRentalInvoicePDF } from '../services/pdfInvoiceService';
+import { generatePOSInvoicePDF, generateRentalInvoicePDF, getStoredInvoice } from '../services/pdfInvoiceService';
+import { isConnected, sendWADocument } from '../services/whatsappService';
 import { AuthRequest } from '../middleware/auth';
 
 // ─── FitSMS Delivery Report Webhook ─────────────────────────────────────────
@@ -270,4 +271,49 @@ export async function sendManualNotification(req: AuthRequest, res: Response): P
     console.error('sendManualNotification error:', err);
     res.status(500).json({ error: err.message });
   }
+}
+
+// ─── Auto-Send WhatsApp Invoice (used by pos/returns controllers) ─────────────
+export async function autoSendWAInvoice(
+  type: 'pos' | 'rental',
+  refId: string,
+  phone: string,
+  customerId: string,
+): Promise<void> {
+  if (!isConnected()) {
+    console.log('[WA Auto] Skipped — WhatsApp not connected');
+    return;
+  }
+
+  // Generate PDF
+  const token = type === 'pos'
+    ? await generatePOSInvoicePDF(refId)
+    : await generateRentalInvoicePDF(refId);
+  const entry = getStoredInvoice(token);
+  if (!entry) throw new Error('PDF generation returned empty entry');
+
+  // Build message
+  const shopRes = await db.query(`SELECT value FROM settings WHERE key = 'shop_name'`);
+  const shopName = shopRes.rows[0]?.value || 'The Royale Lounge';
+  const detailText = type === 'pos'
+    ? await buildPOSInvoiceText(refId)
+    : await buildRentalInvoiceText(refId);
+  const caption =
+    `We are pleased to have you as a valuable customer. ` +
+    `Please find the details of your transaction.\n\n` +
+    `${detailText}\n\n` +
+    `Thanks for doing business with us.\nRegards,\n${shopName}`;
+
+  // Send PDF as document
+  await sendWADocument(phone, entry.buffer, entry.filename, caption);
+
+  // Log notification
+  await sendNotification({
+    customerId,
+    rentalId: type === 'rental' ? refId : undefined,
+    type: `${type}_invoice`,
+    channel: 'whatsapp',
+    recipient: phone,
+    message: caption,
+  }).catch(() => {});
 }
