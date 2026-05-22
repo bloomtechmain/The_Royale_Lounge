@@ -24,7 +24,7 @@ export default function LoginPage() {
       const { token, user } = await authService.login(email, password);
       setAuth(token, user);
       toast.success(`Welcome back, ${user.name}!`);
-      navigate('/dashboard');
+      navigate(user.role === 'cashier' ? '/pos' : '/dashboard');
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Login failed. Please try again.');
     } finally {

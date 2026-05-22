@@ -24,6 +24,11 @@ import EmployeesPage from './pages/employees/EmployeesPage';
 import PayrollPage from './pages/payroll/PayrollPage';
 import PromotionsPage from './pages/promotions/PromotionsPage';
 
+function HomeRedirect() {
+  const { user } = useAuthStore();
+  return <Navigate to={user?.role === 'cashier' ? '/pos' : '/dashboard'} replace />;
+}
+
 export default function App() {
   const { token } = useAuthStore();
 
@@ -33,7 +38,7 @@ export default function App() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<HomeRedirect />} />
           <Route path="/dashboard" element={<DashboardPage />} />
 
           <Route path="/products" element={<ProductsPage />} />
