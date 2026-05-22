@@ -69,7 +69,10 @@ export async function getInventorySummary(_req: Request, res: Response): Promise
 }
 
 export async function recordMovement(req: AuthRequest, res: Response): Promise<void> {
-  const { variantId, type, quantity, reason } = req.body;
+  // stockType: 'sale' (default) | 'rental'
+  // For 'in'/'out': determines whether available_for_rent is also updated
+  // For 'adjustment': determines whether stock_quantity or available_for_rent is set
+  const { variantId, type, quantity, reason, stockType = 'sale' } = req.body;
 
   if (!variantId || !type || !quantity) {
     res.status(400).json({ error: 'variantId, type, and quantity are required' });
@@ -85,23 +88,27 @@ export async function recordMovement(req: AuthRequest, res: Response): Promise<v
       VALUES ($1, $2, $3, $4, $5)
     `, [variantId, type, quantity, reason, req.user?.id]);
 
-    // Update stock based on movement type
     if (type === 'in' || type === 'return' || type === 'rental_return') {
+      // Also update rental pool if this is a rental return OR explicitly for rental
+      const alsoRental = type === 'return' || type === 'rental_return' || stockType === 'rental';
       await client.query(`
         UPDATE product_variants SET
           stock_quantity = stock_quantity + $1,
-          available_for_rent = CASE WHEN $2 IN ('return', 'rental_return') THEN available_for_rent + $1 ELSE available_for_rent END,
+          available_for_rent = CASE WHEN $2 THEN available_for_rent + $1 ELSE available_for_rent END,
           updated_at = NOW()
         WHERE id = $3
-      `, [quantity, type, variantId]);
+      `, [quantity, alsoRental, variantId]);
+
     } else if (type === 'out' || type === 'rental_out') {
+      const alsoRental = type === 'rental_out' || stockType === 'rental';
       await client.query(`
         UPDATE product_variants SET
           stock_quantity = GREATEST(0, stock_quantity - $1),
-          available_for_rent = CASE WHEN $2 = 'rental_out' THEN GREATEST(0, available_for_rent - $1) ELSE available_for_rent END,
+          available_for_rent = CASE WHEN $2 THEN GREATEST(0, available_for_rent - $1) ELSE available_for_rent END,
           updated_at = NOW()
         WHERE id = $3
-      `, [quantity, type, variantId]);
+      `, [quantity, alsoRental, variantId]);
+
     } else if (type === 'damage') {
       await client.query(`
         UPDATE product_variants SET
@@ -110,13 +117,25 @@ export async function recordMovement(req: AuthRequest, res: Response): Promise<v
           updated_at = NOW()
         WHERE id = $2
       `, [quantity, variantId]);
+
     } else if (type === 'adjustment') {
-      await client.query(`
-        UPDATE product_variants SET
-          stock_quantity = $1,
-          updated_at = NOW()
-        WHERE id = $2
-      `, [quantity, variantId]);
+      if (stockType === 'rental') {
+        // Set rental allocation (cannot exceed current total stock)
+        await client.query(`
+          UPDATE product_variants SET
+            available_for_rent = LEAST($1, stock_quantity),
+            updated_at = NOW()
+          WHERE id = $2
+        `, [quantity, variantId]);
+      } else {
+        // Set total stock count
+        await client.query(`
+          UPDATE product_variants SET
+            stock_quantity = $1,
+            updated_at = NOW()
+          WHERE id = $2
+        `, [quantity, variantId]);
+      }
     }
 
     await client.query('COMMIT');
