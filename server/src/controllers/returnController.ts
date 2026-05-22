@@ -70,13 +70,13 @@ export async function processReturn(req: AuthRequest, res: Response): Promise<vo
     // Process each returned item
     for (const item of items) {
       // clientCharge is only used for 'lost' items that have no selling price
-      const { rentalItemId, condition, charge: clientCharge = 0 } = item;
+      const { rentalItemId, condition, charge: clientCharge = 0, remark = '' } = item;
 
       await client.query(`
         UPDATE rental_items
-        SET is_returned = true, return_condition = $1, returned_at = $2
+        SET is_returned = true, return_condition = $1, returned_at = $2, damage_remark = $5
         WHERE id = $3 AND rental_id = $4
-      `, [condition || 'good', actualReturn.toISOString(), rentalItemId, rentalId]);
+      `, [condition || 'good', actualReturn.toISOString(), rentalItemId, rentalId, remark || null]);
 
       // Get variant + product info
       const riRes = await client.query(`
@@ -109,7 +109,7 @@ export async function processReturn(req: AuthRequest, res: Response): Promise<vo
         `, [
           product_variant_id,
           itemQty || 1,
-          condition === 'lost' ? 'Item lost' : condition === 'damaged' ? 'Returned damaged' : 'Rental return',
+          condition === 'lost' ? (remark ? `Item lost: ${remark}` : 'Item lost') : condition === 'damaged' ? (remark ? `Returned damaged: ${remark}` : 'Returned damaged') : 'Rental return',
           rentalId,
           req.user?.id,
         ]);
@@ -128,8 +128,8 @@ export async function processReturn(req: AuthRequest, res: Response): Promise<vo
             const itemCost = parseFloat(rental_price_per_day) * (itemQty || 1) * rentalDays;
             charge = itemCost * (dmgPercent / 100);
           }
-          chargeNote = 'Damage charge';
-          damageNotes.push('Item damaged');
+          chargeNote = remark ? `Damage charge: ${remark}` : 'Damage charge';
+          damageNotes.push(remark ? `Item damaged: ${remark}` : 'Item damaged');
         } else if (condition === 'lost') {
           if (clientCharge > 0) {
             // User manually set the charge — use that

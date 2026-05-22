@@ -60,6 +60,7 @@ export default function ReturnsPage() {
   const [itemConditions, setItemConditions] = useState<Record<string, string>>({});
   // custom charge only for lost items that have no selling price
   const [itemCustomCharges, setItemCustomCharges] = useState<Record<string, string>>({});
+  const [itemRemarks, setItemRemarks] = useState<Record<string, string>>({});
   const [fineCalc, setFineCalc] = useState<any>(null);
   const [collectFine, setCollectFine] = useState(true);
 
@@ -122,6 +123,7 @@ export default function ReturnsPage() {
     }
     setItemConditions(conditions);
     setItemCustomCharges({});
+    setItemRemarks({});
     setCollectFine(true);
     try {
       const fine = await returnService.getFineCalc(rental.id, returnDate);
@@ -137,7 +139,8 @@ export default function ReturnsPage() {
     if (!selectedRental) return;
     const items = Object.entries(itemConditions).map(([id, condition]) => {
       const charge = condition !== 'good' ? parseFloat(itemCustomCharges[id] || '0') || 0 : 0;
-      return { rentalItemId: id, condition, charge };
+      const remark = itemRemarks[id] || '';
+      return { rentalItemId: id, condition, charge, remark };
     });
     processReturnMutation.mutate({
       rentalId: selectedRental.id,
@@ -343,6 +346,8 @@ export default function ReturnsPage() {
                           setItemConditions({ ...itemConditions, [item.id]: 'good' });
                           const { [item.id]: _, ...rest } = itemCustomCharges;
                           setItemCustomCharges(rest);
+                          const { [item.id]: __, ...restR } = itemRemarks;
+                          setItemRemarks(restR);
                         }}
                         className={cn(
                           'flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 text-xs font-medium transition-all',
@@ -396,27 +401,39 @@ export default function ReturnsPage() {
                       </button>
                     </div>
 
-                    {/* Damaged — editable charge (pre-filled from settings) */}
+                    {/* Damaged — editable charge + remark */}
                     {cond === 'damaged' && (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-medium text-amber-300">Damage charge (LKR)</p>
-                          {dmgCharge > 0 && (
-                            <span className="text-[10px] text-amber-400/60">
-                              Auto: {formatCurrency(dmgCharge)}
-                            </span>
-                          )}
+                      <div className="space-y-2">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-medium text-amber-300">Damage charge (LKR)</p>
+                            {dmgCharge > 0 && (
+                              <span className="text-[10px] text-amber-400/60">
+                                Auto: {formatCurrency(dmgCharge)}
+                              </span>
+                            )}
+                          </div>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={itemCustomCharges[item.id] ?? ''}
+                            onChange={(e) => setItemCustomCharges({ ...itemCustomCharges, [item.id]: e.target.value })}
+                            onWheel={(e) => e.currentTarget.blur()}
+                            className="w-full bg-charcoal-600 border border-amber-500/30 rounded-xl px-3 py-2 text-sm text-charcoal-50 placeholder-charcoal-400 focus:outline-none focus:border-amber-500/60"
+                          />
                         </div>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="0.00"
-                          value={itemCustomCharges[item.id] ?? ''}
-                          onChange={(e) => setItemCustomCharges({ ...itemCustomCharges, [item.id]: e.target.value })}
-                          onWheel={(e) => e.currentTarget.blur()}
-                          className="w-full bg-charcoal-600 border border-amber-500/30 rounded-xl px-3 py-2 text-sm text-charcoal-50 placeholder-charcoal-400 focus:outline-none focus:border-amber-500/60"
-                        />
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium text-amber-300">Remark</p>
+                          <textarea
+                            rows={2}
+                            placeholder="Describe the damage..."
+                            value={itemRemarks[item.id] ?? ''}
+                            onChange={(e) => setItemRemarks({ ...itemRemarks, [item.id]: e.target.value })}
+                            className="w-full bg-charcoal-600 border border-amber-500/30 rounded-xl px-3 py-2 text-sm text-charcoal-50 placeholder-charcoal-400 focus:outline-none focus:border-amber-500/60 resize-none"
+                          />
+                        </div>
                       </div>
                     )}
 
