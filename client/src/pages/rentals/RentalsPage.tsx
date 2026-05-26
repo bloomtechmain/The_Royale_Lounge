@@ -328,9 +328,10 @@ function CalendarView({ rentals, onRentalClick }: {
   });
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
 
-  const year     = month.getFullYear();
-  const monthNum = month.getMonth();
-  const cells    = buildCalendarCells(year, monthNum);
+  const year       = month.getFullYear();
+  const monthNum   = month.getMonth();
+  const cells      = buildCalendarCells(year, monthNum);
+  const numRows    = cells.length / 7;
   const monthLabel = month.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
   const selectedRentals = selectedDate ? getRentalsForDay(rentals, selectedDate) : [];
@@ -341,91 +342,95 @@ function CalendarView({ rentals, onRentalClick }: {
     : '';
 
   return (
-    <div className="flex gap-4 items-start">
-      {/* ── Calendar grid ── */}
-      <div className="flex-1 min-w-0 card p-0 overflow-hidden">
+    // h-full fills the flex-1 wrapper given by the page
+    <div className="flex gap-3 h-full min-h-0">
+
+      {/* ── Calendar card ── */}
+      <div className="flex-1 min-w-0 min-h-0 card p-0 flex flex-col overflow-hidden">
+
         {/* Month nav */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-charcoal-600 bg-charcoal-800">
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-charcoal-600 bg-charcoal-800">
           <button
             onClick={() => setMonth(new Date(year, monthNum - 1, 1))}
-            className="p-2 rounded-lg hover:bg-charcoal-600 text-charcoal-300 hover:text-charcoal-50 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-charcoal-600 text-charcoal-300 hover:text-charcoal-50 transition-colors"
           >
-            <ChevronLeft size={17} />
+            <ChevronLeft size={16} />
           </button>
-          <h3 className="font-display font-semibold text-charcoal-50 text-base">{monthLabel}</h3>
+          <h3 className="font-display font-semibold text-charcoal-50 text-sm">{monthLabel}</h3>
           <button
             onClick={() => setMonth(new Date(year, monthNum + 1, 1))}
-            className="p-2 rounded-lg hover:bg-charcoal-600 text-charcoal-300 hover:text-charcoal-50 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-charcoal-600 text-charcoal-300 hover:text-charcoal-50 transition-colors"
           >
-            <ChevronRight size={17} />
+            <ChevronRight size={16} />
           </button>
         </div>
 
         {/* Day-of-week header */}
-        <div className="grid grid-cols-7 border-b border-charcoal-600 bg-charcoal-800/60">
+        <div className="flex-shrink-0 grid grid-cols-7 bg-charcoal-800/70 border-b border-charcoal-600">
           {DOW_LABELS.map(d => (
-            <div key={d} className="py-2 text-center text-[11px] font-semibold text-charcoal-400 uppercase tracking-wider">
+            <div key={d} className="py-1.5 text-center text-[10px] font-semibold text-charcoal-400 uppercase tracking-wider">
               {d}
             </div>
           ))}
         </div>
 
-        {/* Day cells */}
-        <div className="grid grid-cols-7">
-          {cells.map((cell, i) => {
-            const dayStr        = cell.toISOString().slice(0, 10);
-            const inMonth       = cell.getMonth() === monthNum;
-            const isToday       = dayStr === todayStr;
-            const isSelected    = dayStr === selectedDate;
-            const dayRentals    = getRentalsForDay(rentals, dayStr);
-            const visible       = dayRentals.slice(0, 3);
-            const overflow      = dayRentals.length - visible.length;
-            const isLastRow     = i >= cells.length - 7;
-            const isLastCol     = (i + 1) % 7 === 0;
+        {/* Day cells — flex-1 so they fill remaining height; rows share space equally */}
+        <div
+          className="flex-1 min-h-0 grid grid-cols-7 gap-1 p-1.5 bg-charcoal-900/30"
+          style={{ gridTemplateRows: `repeat(${numRows}, 1fr)` }}
+        >
+          {cells.map(cell => {
+            const dayStr     = cell.toISOString().slice(0, 10);
+            const inMonth    = cell.getMonth() === monthNum;
+            const isToday    = dayStr === todayStr;
+            const isSelected = dayStr === selectedDate;
+            const dayRentals = getRentalsForDay(rentals, dayStr);
+            const visible    = dayRentals.slice(0, 3);
+            const overflow   = dayRentals.length - visible.length;
 
             return (
               <div
                 key={dayStr}
-                onClick={() => setSelectedDate(dayStr)}
+                onClick={() => inMonth && setSelectedDate(dayStr)}
                 className={cn(
-                  'relative min-h-[120px] p-2 cursor-pointer transition-all',
-                  'border-b border-r border-charcoal-700/60',
-                  isLastRow  && 'border-b-0',
-                  isLastCol  && 'border-r-0',
-                  inMonth    ? 'hover:bg-charcoal-700/50' : 'opacity-35 pointer-events-none',
-                  isSelected && 'bg-charcoal-700/60 ring-1 ring-inset ring-gold-600/50',
+                  'flex flex-col p-1.5 rounded-lg border transition-all overflow-hidden',
+                  inMonth ? 'cursor-pointer' : 'opacity-30 cursor-default',
+                  // base border
+                  isSelected
+                    ? 'border-gold-600/60 bg-charcoal-700/70 ring-1 ring-gold-600/30'
+                    : 'border-charcoal-600/50 bg-charcoal-800/50 hover:border-charcoal-500 hover:bg-charcoal-700/40',
                 )}
               >
                 {/* Date number */}
                 <div className={cn(
-                  'w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold mb-1.5',
+                  'w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold mb-1 flex-shrink-0',
                   isToday    && 'bg-gold-600 text-charcoal-900',
                   isSelected && !isToday && 'bg-charcoal-500 text-charcoal-50',
-                  !isToday   && !isSelected && 'text-charcoal-200',
+                  !isToday   && !isSelected && 'text-charcoal-300',
                 )}>
                   {cell.getDate()}
                 </div>
 
                 {/* Rental chips */}
-                <div className="space-y-1">
+                <div className="space-y-0.5 flex-1 min-h-0 overflow-hidden">
                   {visible.map(r => (
                     <div
                       key={r.id}
                       onClick={e => { e.stopPropagation(); onRentalClick(r); }}
                       title={`${r.booking_number} — ${r.customer_name} (${r.dayRole})`}
                       className={cn(
-                        'flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border truncate font-medium cursor-pointer hover:opacity-75 transition-opacity',
+                        'flex items-center gap-0.5 text-[9px] px-1 py-px rounded border truncate font-medium cursor-pointer hover:opacity-75 transition-opacity leading-tight',
                         ROLE_CHIP[r.dayRole],
                       )}
                     >
                       <span className="truncate">{r.customer_name?.split(' ')[0]}</span>
-                      <span className="flex-shrink-0 opacity-70">
+                      <span className="flex-shrink-0">
                         {r.dayRole === 'pickup' ? '↑' : r.dayRole === 'return' ? '↓' : '·'}
                       </span>
                     </div>
                   ))}
                   {overflow > 0 && (
-                    <p className="text-[10px] text-charcoal-400 pl-1 font-medium">+{overflow} more</p>
+                    <p className="text-[9px] text-charcoal-400 leading-tight font-medium">+{overflow}</p>
                   )}
                 </div>
               </div>
@@ -434,9 +439,9 @@ function CalendarView({ rentals, onRentalClick }: {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 px-4 py-2.5 border-t border-charcoal-600 bg-charcoal-800/40">
+        <div className="flex-shrink-0 flex items-center gap-4 px-4 py-2 border-t border-charcoal-600 bg-charcoal-800/60">
           <span className="text-[10px] text-charcoal-500 uppercase tracking-wide">Legend</span>
-          {([['pickup','↑ Pickup','text-blue-400'],['return','↓ Return','text-amber-400'],['active','· Active','text-charcoal-400']] as const).map(([,label,cls]) => (
+          {([['↑ Pickup','text-blue-400'],['↓ Return','text-amber-400'],['· Active','text-charcoal-400']] as const).map(([label, cls]) => (
             <span key={label} className={`text-[10px] font-medium ${cls}`}>{label}</span>
           ))}
         </div>
@@ -451,10 +456,10 @@ function CalendarView({ rentals, onRentalClick }: {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 16 }}
             transition={{ duration: 0.18 }}
-            className="w-72 xl:w-80 flex-shrink-0 card p-0 overflow-hidden sticky top-4"
+            className="w-64 xl:w-72 flex-shrink-0 card p-0 flex flex-col overflow-hidden"
           >
             {/* Panel header */}
-            <div className="px-4 py-3 border-b border-charcoal-600 flex items-start justify-between gap-2">
+            <div className="flex-shrink-0 px-4 py-3 border-b border-charcoal-600 flex items-start justify-between gap-2">
               <div>
                 <p className="font-semibold text-charcoal-50 text-sm leading-tight">{selectedLabel}</p>
                 <p className="text-xs text-charcoal-400 mt-0.5">
@@ -465,15 +470,15 @@ function CalendarView({ rentals, onRentalClick }: {
                 onClick={() => setSelectedDate('')}
                 className="mt-0.5 p-1 rounded-lg hover:bg-charcoal-600 text-charcoal-400 hover:text-charcoal-100 transition-colors flex-shrink-0"
               >
-                <X size={14} />
+                <X size={13} />
               </button>
             </div>
 
-            {/* Booking cards */}
-            <div className="overflow-y-auto max-h-[calc(100vh-22rem)] p-3 space-y-2">
+            {/* Booking cards — scrollable */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-2.5 space-y-2">
               {selectedRentals.length === 0 ? (
                 <div className="py-10 text-center">
-                  <CalendarDays size={30} className="mx-auto text-charcoal-600 mb-2" />
+                  <CalendarDays size={28} className="mx-auto text-charcoal-600 mb-2" />
                   <p className="text-charcoal-400 text-sm">No bookings on this date</p>
                 </div>
               ) : selectedRentals.map(r => {
@@ -498,15 +503,14 @@ function CalendarView({ rentals, onRentalClick }: {
                       <ChevronRight size={9} className="text-charcoal-600" />
                       <span>{formatDate(r.rental_end_date)}</span>
                     </div>
-                    {urgency && (
-                      <span className={cn('mt-1.5 inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded border', urgency.cls)}>
-                        {urgency.label}
-                      </span>
-                    )}
-                    {/* Role badge */}
-                    <div className="mt-1.5">
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {urgency && (
+                        <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded border', urgency.cls)}>
+                          {urgency.label}
+                        </span>
+                      )}
                       <span className={cn('text-[10px] px-1.5 py-0.5 rounded border font-medium', ROLE_CHIP[r.dayRole])}>
-                        {r.dayRole === 'pickup' ? '↑ Pickup day' : r.dayRole === 'return' ? '↓ Return day' : '· Active rental'}
+                        {r.dayRole === 'pickup' ? '↑ Pickup' : r.dayRole === 'return' ? '↓ Return' : '· Active'}
                       </span>
                     </div>
                   </div>
@@ -640,7 +644,7 @@ export default function RentalsPage() {
   }).length;
 
   return (
-    <div className="space-y-5">
+    <div className={cn(view === 'calendar' ? 'flex flex-col gap-4 h-full' : 'space-y-5')}>
       {/* Header */}
       <div className="page-header">
         <div>
@@ -754,10 +758,12 @@ export default function RentalsPage() {
 
       {/* Calendar view */}
       {view === 'calendar' && (
-        <CalendarView
-          rentals={calendarRentals}
-          onRentalClick={(r) => navigate(`/rentals/${r.id}`)}
-        />
+        <div className="flex-1 min-h-0">
+          <CalendarView
+            rentals={calendarRentals}
+            onRentalClick={(r) => navigate(`/rentals/${r.id}`)}
+          />
+        </div>
       )}
     </div>
   );
