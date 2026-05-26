@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { db } from '../config/database';
-import { sendNotification, buildPOSInvoiceText, buildRentalInvoiceText, getWaLink, sendWhatsAppCloudDoc } from '../services/notificationService';
+import { sendNotification, buildPOSInvoiceText, buildPOSSmsText, buildRentalInvoiceText, getWaLink, sendWhatsAppCloudDoc } from '../services/notificationService';
 import { generatePOSInvoicePDF, generateRentalInvoicePDF, getStoredInvoice } from '../services/pdfInvoiceService';
 import { isConnected, sendWADocument } from '../services/whatsappService';
 import { AuthRequest } from '../middleware/auth';
@@ -106,7 +106,7 @@ export async function getNotificationLogs(req: Request, res: Response): Promise<
 
 export async function sendInvoice(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const { type, referenceId, channel } = req.body;
+    const { type, referenceId, channel, phone: phoneOverride } = req.body;
 
     if (!type || !referenceId || !channel) {
       res.status(400).json({ error: 'type, referenceId, and channel are required' });
@@ -142,7 +142,12 @@ export async function sendInvoice(req: AuthRequest, res: Response): Promise<void
       );
       if (!r.rows[0]) { res.status(404).json({ error: 'Sale not found' }); return; }
       customerId = r.rows[0].customer_id;
-      phone = channel === 'whatsapp' ? (r.rows[0].whatsapp || r.rows[0].phone) : r.rows[0].phone;
+      // Phone override allows sending to a manually-entered number (e.g. walk-in customer)
+      if (phoneOverride) {
+        phone = phoneOverride;
+      } else {
+        phone = channel === 'whatsapp' ? (r.rows[0].whatsapp || r.rows[0].phone) : r.rows[0].phone;
+      }
     } else if (type === 'rental') {
       const r = await db.query(
         `SELECT r.customer_id, c.phone, c.whatsapp FROM rentals r
@@ -168,7 +173,12 @@ export async function sendInvoice(req: AuthRequest, res: Response): Promise<void
       `Please find your invoice attached to this message.\n\n` +
       `Regards,\n${shopName}`;
 
-    // Full message with details for SMS / wa.me link (no PDF auto-attached)
+    // SMS message: POS uses the branded template; rentals use the detailed invoice text
+    const smsMessage = type === 'pos'
+      ? await buildPOSSmsText(referenceId)
+      : await buildRentalInvoiceText(referenceId);
+
+    // wa.me fallback message (PDF link appended separately below)
     const detailText = type === 'pos'
       ? await buildPOSInvoiceText(referenceId)
       : await buildRentalInvoiceText(referenceId);
@@ -242,7 +252,7 @@ export async function sendInvoice(req: AuthRequest, res: Response): Promise<void
       await sendNotification({
         rentalId: rentalIdForLog, customerId,
         type: `${type}_invoice`, channel: 'sms',
-        recipient: phone, message: fullMessage,
+        recipient: phone, message: smsMessage,
       });
     }
     res.json({ sent: true });

@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { db } from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { generateSaleNumber } from '../utils/generateSKU';
-import { autoSendWAInvoice } from './notificationsController';
 
 export async function checkout(req: AuthRequest, res: Response): Promise<void> {
   const {
@@ -178,28 +177,16 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
 
     await client.query('COMMIT');
 
-    // Auto-send WhatsApp invoice (fire-and-forget)
+    // Fetch customer contact details for receipt (used by frontend for WhatsApp/SMS)
+    let customerPhone: string | null = null;
+    let customerWhatsapp: string | null = null;
     if (customerId) {
-      db.query(`SELECT value FROM settings WHERE key = 'whatsapp_mode'`).then(async (modeRes) => {
-        if (modeRes.rows[0]?.value === 'qr_scan') {
-          const cRes = await db.query(`SELECT whatsapp, phone FROM customers WHERE id = $1`, [customerId]);
-          const waPhone = cRes.rows[0]?.whatsapp || cRes.rows[0]?.phone;
-          if (waPhone) {
-            autoSendWAInvoice('pos', sale.id, waPhone, customerId)
-              .catch((e: Error) => console.error('[WA Auto] POS invoice:', e.message));
-          }
-        }
-      }).catch(() => {});
+      const cRes = await db.query(
+        `SELECT phone, whatsapp FROM customers WHERE id = $1`, [customerId]
+      );
+      customerPhone = cRes.rows[0]?.phone || null;
+      customerWhatsapp = cRes.rows[0]?.whatsapp || null;
     }
-
-    // Get full sale with items for receipt
-    const fullSaleRes = await client.query(`
-      SELECT s.*, si.*, pv.size, pv.color
-      FROM sales s
-      JOIN sale_items si ON si.sale_id = s.id
-      JOIN product_variants pv ON pv.id = si.product_variant_id
-      WHERE s.id = $1
-    `, [sale.id]);
 
     res.status(201).json({
       sale,
@@ -207,6 +194,8 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
       receipt: {
         saleId: sale.id,
         customerId: customerId || null,
+        customerPhone,
+        customerWhatsapp,
         saleNumber,
         items: itemDetails,
         subtotal,

@@ -6,7 +6,7 @@ import {
   Search, Barcode, ShoppingCart, Plus, Minus, Trash2,
   Package, X, Printer, CheckCircle, Tag, User, Monitor,
   Banknote, CreditCard, Smartphone, Building2, ChevronLeft,
-  StickyNote, MessageCircle, MessageSquare,
+  StickyNote, MessageCircle, CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/services/api';
@@ -48,7 +48,11 @@ export default function POSPage() {
   const [showNotes, setShowNotes] = useState(false);
   const [variantPickerProduct, setVariantPickerProduct] = useState<any | null>(null);
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
-  const [sendingInvoice, setSendingInvoice] = useState<'whatsapp' | 'sms' | null>(null);
+  const [sendingInvoice, setSendingInvoice] = useState(false);
+  // WhatsApp invoice state
+  const [waInvoiceSent, setWaInvoiceSent] = useState(false);
+  const [showWaInput, setShowWaInput] = useState(false);
+  const [waPhoneInput, setWaPhoneInput] = useState('');
 
   const barcodeRef = useRef<HTMLInputElement>(null);
   const productListRef = useRef<(HTMLButtonElement | null)[]>([]);
@@ -224,6 +228,9 @@ export default function POSPage() {
 
       setReceipt(data.receipt);
       setShowReceipt(true);
+      setWaInvoiceSent(false);
+      setShowWaInput(false);
+      setWaPhoneInput(data.receipt?.customerWhatsapp || data.receipt?.customerPhone || '');
       clearCart();
       setCustomer(null, null);
       setSelectedPromotion(null);
@@ -330,23 +337,38 @@ export default function POSPage() {
     );
   }, [cartItems, subtotal, discount, discountAmount, promoDiscount, total, customerName]);
 
-  const handleSendInvoice = async (channel: 'whatsapp' | 'sms') => {
-    if (!receipt?.saleId) return;
-    setSendingInvoice(channel);
+  // Send WhatsApp invoice to the given phone number
+  const handleSendWhatsApp = async (phone: string) => {
+    if (!receipt?.saleId || !phone.trim()) return;
+    setSendingInvoice(true);
     try {
       const res = await api.post('/notifications/send-invoice', {
-        type: 'pos', referenceId: receipt.saleId, channel,
+        type: 'pos', referenceId: receipt.saleId, channel: 'whatsapp', phone: phone.trim(),
       });
       if (res.data.waLink) {
         window.open(res.data.waLink, '_blank');
       } else {
-        toast.success(channel === 'whatsapp' ? 'Invoice sent via WhatsApp!' : 'Invoice sent via SMS!');
+        toast.success('WhatsApp invoice sent!');
       }
+      setWaInvoiceSent(true);
+      setShowWaInput(false);
     } catch (e: any) {
-      toast.error(e.response?.data?.error || 'Failed to send invoice');
+      toast.error(e.response?.data?.error || 'Failed to send WhatsApp invoice');
     } finally {
-      setSendingInvoice(null);
+      setSendingInvoice(false);
     }
+  };
+
+  // Close receipt — auto-send SMS if WhatsApp was not chosen and customer has a phone
+  const handleCloseReceipt = () => {
+    if (!waInvoiceSent && receipt?.saleId && receipt?.customerId) {
+      api.post('/notifications/send-invoice', {
+        type: 'pos', referenceId: receipt.saleId, channel: 'sms',
+      }).catch(() => {});
+    }
+    setShowReceipt(false);
+    setWaInvoiceSent(false);
+    setShowWaInput(false);
   };
 
   const handleCheckout = () => {
@@ -925,7 +947,7 @@ export default function POSPage() {
       )}
 
       {/* ─── Receipt Drawer ─── */}
-      <Drawer open={showReceipt} onClose={() => setShowReceipt(false)} title="Receipt">
+      <Drawer open={showReceipt} onClose={handleCloseReceipt} title="Receipt">
         {receipt && (
           <div className="space-y-4">
             <div className="text-center border-b border-charcoal-500 pb-4">
@@ -951,32 +973,64 @@ export default function POSPage() {
               <div className="flex justify-between"><span className="text-charcoal-200">Paid</span><span>{formatCurrency(receipt.amountPaid)}</span></div>
               {receipt.changeAmount > 0 && <div className="flex justify-between text-emerald-400"><span>Change</span><span>{formatCurrency(receipt.changeAmount)}</span></div>}
             </div>
-            {receipt?.customerId && (
-              <div className="space-y-2 pt-2 border-t border-charcoal-600">
-                <p className="text-xs text-charcoal-300 font-medium">Send Receipt to Customer</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="secondary"
-                    icon={<MessageCircle size={14} />}
-                    onClick={() => handleSendInvoice('whatsapp')}
-                    loading={sendingInvoice === 'whatsapp'}
-                  >
-                    WhatsApp
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    icon={<MessageSquare size={14} />}
-                    onClick={() => handleSendInvoice('sms')}
-                    loading={sendingInvoice === 'sms'}
-                  >
-                    SMS
-                  </Button>
+            {/* WhatsApp Invoice */}
+            <div className="space-y-2 pt-2 border-t border-charcoal-600">
+              <p className="text-xs text-charcoal-300 font-medium">Send Invoice</p>
+              {waInvoiceSent ? (
+                <div className="flex items-center gap-2 text-emerald-400 text-sm py-1">
+                  <CheckCircle2 size={16} />
+                  <span>WhatsApp invoice sent</span>
                 </div>
-              </div>
-            )}
+              ) : showWaInput ? (
+                <div className="space-y-2">
+                  <input
+                    className="input-dark w-full text-sm"
+                    placeholder="Enter WhatsApp number (e.g. 94771234567)"
+                    value={waPhoneInput}
+                    onChange={e => setWaPhoneInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSendWhatsApp(waPhoneInput)}
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      variant="primary"
+                      className="flex-1 text-xs"
+                      loading={sendingInvoice}
+                      onClick={() => handleSendWhatsApp(waPhoneInput)}
+                      disabled={!waPhoneInput.trim()}
+                    >
+                      Send
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="flex-1 text-xs"
+                      onClick={() => setShowWaInput(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  icon={<MessageCircle size={14} />}
+                  loading={sendingInvoice}
+                  onClick={() => {
+                    if (waPhoneInput) {
+                      handleSendWhatsApp(waPhoneInput);
+                    } else {
+                      setShowWaInput(true);
+                    }
+                  }}
+                >
+                  Send WhatsApp Invoice
+                </Button>
+              )}
+            </div>
             <div className="flex gap-2 pt-2">
               <Button variant="secondary" className="flex-1" icon={<Printer size={14} />} onClick={() => window.print()}>Print</Button>
-              <Button variant="primary" className="flex-1" onClick={() => setShowReceipt(false)}>Done</Button>
+              <Button variant="primary" className="flex-1" onClick={handleCloseReceipt}>Done</Button>
             </div>
           </div>
         )}

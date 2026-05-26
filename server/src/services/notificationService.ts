@@ -218,6 +218,41 @@ async function getShopName(): Promise<string> {
   return r.rows[0]?.value || 'The Outfit Lounge';
 }
 
+export async function buildPOSSmsText(saleId: string): Promise<string> {
+  const shop = await getShopName();
+  const res = await db.query(`
+    SELECT s.sale_number, s.total_amount, s.payment_method, s.created_at,
+           c.name AS customer_name
+    FROM sales s
+    LEFT JOIN customers c ON c.id = s.customer_id
+    WHERE s.id = $1
+  `, [saleId]);
+  if (!res.rows.length) throw new Error('Sale not found');
+  const s = res.rows[0];
+  const PAY_LABELS: Record<string, string> = {
+    cash: 'Cash', card: 'Card', mobile_payment: 'Mobile Pay',
+    bank_transfer: 'Bank Transfer', mixed: 'Mixed',
+  };
+  const customerName = s.customer_name || 'Valued Customer';
+  const total = parseFloat(s.total_amount).toLocaleString('en-LK', { minimumFractionDigits: 2 });
+  const payMethod = PAY_LABELS[s.payment_method] || s.payment_method;
+  const date = new Date(s.created_at).toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
+  return (
+    `Dear ${customerName},\n\n` +
+    `Thank you for shopping with ${shop}.\n\n` +
+    `Your purchase has been completed successfully.\n\n` +
+    `🧾 Invoice No: ${s.sale_number}\n` +
+    `💰 Total Amount: LKR ${total}\n` +
+    `💳 Payment Method: ${payMethod}\n` +
+    `📅 Date: ${date}\n\n` +
+    `We truly appreciate your business and look forward to serving you again.\n\n` +
+    `Thank you,\n` +
+    `${shop.toUpperCase()}`
+  );
+}
+
 export async function buildPOSInvoiceText(saleId: string): Promise<string> {
   const shop = await getShopName();
   const res = await db.query(`
