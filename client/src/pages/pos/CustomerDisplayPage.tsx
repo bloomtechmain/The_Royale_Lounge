@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, ShoppingBag, CalendarDays } from 'lucide-react';
+import { CheckCircle2, ShoppingBag, CalendarDays, Maximize2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { DisplayCartItem, DisplayRentalItem } from '@/services/customerDisplayChannel';
 
@@ -397,16 +397,70 @@ function RentalScreen({ items, total, customerName, startDate, endDate, shopName
   );
 }
 
+// ─── Fullscreen overlay ───────────────────────────────────────────────────────
+function FullscreenOverlay() {
+  const handleClick = () => {
+    document.documentElement.requestFullscreen().catch(() => {});
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="absolute inset-0 z-50 flex flex-col items-center justify-center cursor-pointer"
+      style={{ background: 'rgba(10,10,16,0.97)' }}
+      onClick={handleClick}
+    >
+      {/* Pulsing ring */}
+      <motion.div
+        className="absolute w-64 h-64 rounded-full border border-gold-600/20"
+        animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.7, 0.3] }}
+        transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+      />
+      <motion.div
+        className="absolute w-48 h-48 rounded-full border border-gold-500/30"
+        animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.8, 0.4] }}
+        transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut', delay: 0.3 }}
+      />
+
+      <motion.div
+        animate={{ scale: [1, 1.06, 1] }}
+        transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+        className="relative z-10 flex flex-col items-center gap-6"
+      >
+        <Maximize2 size={72} className="text-gold-400" strokeWidth={1.1} />
+        <div className="text-center">
+          <h2 className="font-display text-5xl font-bold text-charcoal-50 leading-none">
+            Tap to Activate
+          </h2>
+          <p className="text-charcoal-400 text-base mt-3 tracking-wide">
+            Touch anywhere to enter fullscreen
+          </p>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function CustomerDisplayPage() {
   const [shopName, setShopName] = useState('THE OUTFIT LOUNGE');
   const [shopLogo, setShopLogo] = useState('');
   const [screen, setScreen] = useState<DisplayMsg>({ type: 'idle' });
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
-    // Prevent accidental navigation away
     document.title = 'Customer Display';
 
+    // Track fullscreen state
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+
+    // Try auto-fullscreen — succeeds in Chrome when the window was opened via
+    // window.open() from a user-gesture context on the POS window
+    document.documentElement.requestFullscreen().catch(() => {});
+
+    // BroadcastChannel for real-time POS updates
     const channel = new BroadcastChannel('pos-customer-display');
     channel.onmessage = (e: MessageEvent<DisplayMsg>) => {
       const msg = e.data;
@@ -417,15 +471,23 @@ export default function CustomerDisplayPage() {
       }
       setScreen(msg);
       if (msg.type === 'pos_checkout') {
-        // Auto-return to idle after 6 seconds
         setTimeout(() => setScreen({ type: 'idle' }), 6000);
       }
     };
-    return () => channel.close();
+
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      channel.close();
+    };
   }, []);
 
   return (
-    <div className="h-screen bg-[#111118] text-charcoal-50 flex flex-col overflow-hidden select-none cursor-none">
+    <div className="h-screen bg-[#111118] text-charcoal-50 flex flex-col overflow-hidden select-none relative"
+         style={{ cursor: isFullscreen ? 'none' : 'default' }}>
+
+      {/* Fullscreen activation overlay — shown until fullscreen is entered */}
+      {!isFullscreen && <FullscreenOverlay />}
+
       <AnimatePresence mode="wait">
         {screen.type === 'idle' && (
           <IdleScreen key="idle" shopName={shopName} shopLogo={shopLogo} />

@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Barcode, ShoppingCart, Plus, Minus, Trash2,
-  Package, X, Printer, CheckCircle, Tag, User,
+  Package, X, Printer, CheckCircle, Tag, User, Monitor,
   Banknote, CreditCard, Smartphone, Building2, ChevronLeft,
   StickyNote, MessageCircle, MessageSquare,
 } from 'lucide-react';
@@ -117,11 +117,48 @@ export default function POSPage() {
   } = useCartStore();
 
   // ── Customer display ───────────────────────────────────────────────────────
-  // Auto-open the customer display window on the second screen
-  useEffect(() => {
-    window.open('/customer-display', 'customer-display',
-      'toolbar=0,menubar=0,scrollbars=0,resizable=1,status=0');
-  }, []);
+  const displayWinRef = useRef<Window | null>(null);
+
+  // Open (or focus) the customer display window, placed on the second screen
+  // when the Window Management API is available (Chrome/Edge ≥ 100).
+  const openCustomerDisplay = async () => {
+    // Re-use existing window if still open
+    if (displayWinRef.current && !displayWinRef.current.closed) {
+      displayWinRef.current.focus();
+      return;
+    }
+
+    let features = 'toolbar=0,menubar=0,scrollbars=0,resizable=1,status=0';
+
+    try {
+      // Window Management API — positions window on the second screen automatically
+      if ('getScreenDetails' in window) {
+        const screenDetails = await (window as any).getScreenDetails();
+        const screens: any[] = screenDetails.screens;
+        // Prefer the non-primary screen; fall back to last screen
+        const target = screens.find((s: any) => !s.isPrimary) ?? screens[screens.length - 1];
+        features = [
+          'toolbar=0,menubar=0,scrollbars=0,resizable=1,status=0',
+          `left=${target.availLeft}`,
+          `top=${target.availTop}`,
+          `width=${target.availWidth}`,
+          `height=${target.availHeight}`,
+        ].join(',');
+      }
+    } catch {
+      // API unavailable or permission denied — open without explicit positioning
+    }
+
+    const w = window.open('/customer-display', 'customer-display', features);
+    displayWinRef.current = w;
+
+    if (!w) {
+      toast.error('Popup blocked. Allow popups for this site, then click the monitor icon.');
+    }
+  };
+
+  // Auto-open on mount; browsers allow this when the site is trusted / popups are whitelisted
+  useEffect(() => { openCustomerDisplay(); }, []);
 
   // Broadcast shop info when settings load
   const { data: shopSettings } = useQuery({
@@ -343,6 +380,14 @@ export default function POSPage() {
               icon={<Search size={15} />}
               className="flex-1"
             />
+            {/* Customer display button — opens/focuses the second screen window */}
+            <button
+              onClick={openCustomerDisplay}
+              title="Open Customer Display"
+              className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-charcoal-600 hover:bg-charcoal-500 border border-charcoal-500/60 text-charcoal-300 hover:text-gold-400 transition-colors"
+            >
+              <Monitor size={16} />
+            </button>
           </div>
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
             {categoryOptions.map((opt) => (
