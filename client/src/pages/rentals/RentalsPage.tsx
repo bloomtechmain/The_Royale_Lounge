@@ -4,7 +4,7 @@ import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, List, Columns3,
+  Plus, List, Columns3, CalendarDays, ChevronLeft, X,
   CalendarCheck, PackageCheck, PackageOpen, RotateCcw,
   CheckCircle2, AlertTriangle, Clock, Package,
   User, Calendar, ChevronRight,
@@ -278,6 +278,248 @@ function KanbanColumn({
   );
 }
 
+// ─── Calendar helpers ─────────────────────────────────────────────────────────
+function buildCalendarCells(year: number, month: number): Date[] {
+  const firstDay = new Date(year, month, 1);
+  const lastDay  = new Date(year, month + 1, 0);
+  const startDow = (firstDay.getDay() + 6) % 7; // Mon=0 … Sun=6
+  const cells: Date[] = [];
+  for (let i = startDow; i > 0; i--) cells.push(new Date(year, month, 1 - i));
+  for (let d = 1; d <= lastDay.getDate(); d++) cells.push(new Date(year, month, d));
+  const trail = (7 - (cells.length % 7)) % 7;
+  for (let d = 1; d <= trail; d++) cells.push(new Date(year, month + 1, d));
+  return cells;
+}
+
+type CalRental = Rental & { dayRole: 'pickup' | 'return' | 'active' };
+
+function getRentalsForDay(rentals: Rental[], dayStr: string): CalRental[] {
+  return rentals
+    .filter(r => {
+      const s = r.rental_start_date.slice(0, 10);
+      const e = r.rental_end_date.slice(0, 10);
+      return s <= dayStr && e >= dayStr;
+    })
+    .map(r => ({
+      ...r,
+      dayRole: r.rental_start_date.slice(0, 10) === dayStr ? 'pickup'
+             : r.rental_end_date.slice(0, 10) === dayStr   ? 'return'
+             : 'active' as 'pickup' | 'return' | 'active',
+    }));
+}
+
+const ROLE_CHIP: Record<string, string> = {
+  pickup: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  return: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  active: 'bg-charcoal-600/70 text-charcoal-300 border-charcoal-500/30',
+};
+
+const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+// ─── Calendar view ────────────────────────────────────────────────────────────
+function CalendarView({ rentals, onRentalClick }: {
+  rentals: Rental[];
+  onRentalClick: (r: Rental) => void;
+}) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [month, setMonth] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
+
+  const year     = month.getFullYear();
+  const monthNum = month.getMonth();
+  const cells    = buildCalendarCells(year, monthNum);
+  const monthLabel = month.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+  const selectedRentals = selectedDate ? getRentalsForDay(rentals, selectedDate) : [];
+  const selectedLabel   = selectedDate
+    ? new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'long',
+      })
+    : '';
+
+  return (
+    <div className="flex gap-4 items-start">
+      {/* ── Calendar grid ── */}
+      <div className="flex-1 min-w-0 card p-0 overflow-hidden">
+        {/* Month nav */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-charcoal-600 bg-charcoal-800">
+          <button
+            onClick={() => setMonth(new Date(year, monthNum - 1, 1))}
+            className="p-2 rounded-lg hover:bg-charcoal-600 text-charcoal-300 hover:text-charcoal-50 transition-colors"
+          >
+            <ChevronLeft size={17} />
+          </button>
+          <h3 className="font-display font-semibold text-charcoal-50 text-base">{monthLabel}</h3>
+          <button
+            onClick={() => setMonth(new Date(year, monthNum + 1, 1))}
+            className="p-2 rounded-lg hover:bg-charcoal-600 text-charcoal-300 hover:text-charcoal-50 transition-colors"
+          >
+            <ChevronRight size={17} />
+          </button>
+        </div>
+
+        {/* Day-of-week header */}
+        <div className="grid grid-cols-7 border-b border-charcoal-600 bg-charcoal-800/60">
+          {DOW_LABELS.map(d => (
+            <div key={d} className="py-2 text-center text-[11px] font-semibold text-charcoal-400 uppercase tracking-wider">
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Day cells */}
+        <div className="grid grid-cols-7">
+          {cells.map((cell, i) => {
+            const dayStr        = cell.toISOString().slice(0, 10);
+            const inMonth       = cell.getMonth() === monthNum;
+            const isToday       = dayStr === todayStr;
+            const isSelected    = dayStr === selectedDate;
+            const dayRentals    = getRentalsForDay(rentals, dayStr);
+            const visible       = dayRentals.slice(0, 3);
+            const overflow      = dayRentals.length - visible.length;
+            const isLastRow     = i >= cells.length - 7;
+            const isLastCol     = (i + 1) % 7 === 0;
+
+            return (
+              <div
+                key={dayStr}
+                onClick={() => setSelectedDate(dayStr)}
+                className={cn(
+                  'relative min-h-[120px] p-2 cursor-pointer transition-all',
+                  'border-b border-r border-charcoal-700/60',
+                  isLastRow  && 'border-b-0',
+                  isLastCol  && 'border-r-0',
+                  inMonth    ? 'hover:bg-charcoal-700/50' : 'opacity-35 pointer-events-none',
+                  isSelected && 'bg-charcoal-700/60 ring-1 ring-inset ring-gold-600/50',
+                )}
+              >
+                {/* Date number */}
+                <div className={cn(
+                  'w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold mb-1.5',
+                  isToday    && 'bg-gold-600 text-charcoal-900',
+                  isSelected && !isToday && 'bg-charcoal-500 text-charcoal-50',
+                  !isToday   && !isSelected && 'text-charcoal-200',
+                )}>
+                  {cell.getDate()}
+                </div>
+
+                {/* Rental chips */}
+                <div className="space-y-1">
+                  {visible.map(r => (
+                    <div
+                      key={r.id}
+                      onClick={e => { e.stopPropagation(); onRentalClick(r); }}
+                      title={`${r.booking_number} — ${r.customer_name} (${r.dayRole})`}
+                      className={cn(
+                        'flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border truncate font-medium cursor-pointer hover:opacity-75 transition-opacity',
+                        ROLE_CHIP[r.dayRole],
+                      )}
+                    >
+                      <span className="truncate">{r.customer_name?.split(' ')[0]}</span>
+                      <span className="flex-shrink-0 opacity-70">
+                        {r.dayRole === 'pickup' ? '↑' : r.dayRole === 'return' ? '↓' : '·'}
+                      </span>
+                    </div>
+                  ))}
+                  {overflow > 0 && (
+                    <p className="text-[10px] text-charcoal-400 pl-1 font-medium">+{overflow} more</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-4 px-4 py-2.5 border-t border-charcoal-600 bg-charcoal-800/40">
+          <span className="text-[10px] text-charcoal-500 uppercase tracking-wide">Legend</span>
+          {([['pickup','↑ Pickup','text-blue-400'],['return','↓ Return','text-amber-400'],['active','· Active','text-charcoal-400']] as const).map(([,label,cls]) => (
+            <span key={label} className={`text-[10px] font-medium ${cls}`}>{label}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Side panel ── */}
+      <AnimatePresence>
+        {selectedDate && (
+          <motion.div
+            key="panel"
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 16 }}
+            transition={{ duration: 0.18 }}
+            className="w-72 xl:w-80 flex-shrink-0 card p-0 overflow-hidden sticky top-4"
+          >
+            {/* Panel header */}
+            <div className="px-4 py-3 border-b border-charcoal-600 flex items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold text-charcoal-50 text-sm leading-tight">{selectedLabel}</p>
+                <p className="text-xs text-charcoal-400 mt-0.5">
+                  {selectedRentals.length} booking{selectedRentals.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedDate('')}
+                className="mt-0.5 p-1 rounded-lg hover:bg-charcoal-600 text-charcoal-400 hover:text-charcoal-100 transition-colors flex-shrink-0"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Booking cards */}
+            <div className="overflow-y-auto max-h-[calc(100vh-22rem)] p-3 space-y-2">
+              {selectedRentals.length === 0 ? (
+                <div className="py-10 text-center">
+                  <CalendarDays size={30} className="mx-auto text-charcoal-600 mb-2" />
+                  <p className="text-charcoal-400 text-sm">No bookings on this date</p>
+                </div>
+              ) : selectedRentals.map(r => {
+                const urgency = getUrgencyLabel(r);
+                return (
+                  <div
+                    key={r.id}
+                    onClick={() => onRentalClick(r)}
+                    className="bg-charcoal-700 border border-charcoal-600/60 rounded-xl p-3 cursor-pointer hover:border-gold-700/40 transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-1.5 gap-2">
+                      <span className="text-xs font-bold text-gold-500">{r.booking_number}</span>
+                      <Badge status={r.status} />
+                    </div>
+                    <p className="text-sm font-medium text-charcoal-50 truncate">{r.customer_name}</p>
+                    {r.event_type && (
+                      <p className="text-xs text-charcoal-400 mt-0.5 truncate">{r.event_type}</p>
+                    )}
+                    <div className="flex items-center gap-1 text-xs text-charcoal-400 mt-1.5">
+                      <Calendar size={10} />
+                      <span>{formatDate(r.rental_start_date)}</span>
+                      <ChevronRight size={9} className="text-charcoal-600" />
+                      <span>{formatDate(r.rental_end_date)}</span>
+                    </div>
+                    {urgency && (
+                      <span className={cn('mt-1.5 inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded border', urgency.cls)}>
+                        {urgency.label}
+                      </span>
+                    )}
+                    {/* Role badge */}
+                    <div className="mt-1.5">
+                      <span className={cn('text-[10px] px-1.5 py-0.5 rounded border font-medium', ROLE_CHIP[r.dayRole])}>
+                        {r.dayRole === 'pickup' ? '↑ Pickup day' : r.dayRole === 'return' ? '↓ Return day' : '· Active rental'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ─── List view columns ────────────────────────────────────────────────────────
 const listColumns = [
   {
@@ -338,7 +580,7 @@ export default function RentalsPage() {
   const [search, setSearch]           = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage]               = useState(1);
-  const [view, setView]               = useState<'list' | 'kanban'>('list');
+  const [view, setView]               = useState<'list' | 'kanban' | 'calendar'>('calendar');
 
   // Paginated list query
   const { data, isLoading } = useQuery({
@@ -349,6 +591,14 @@ export default function RentalsPage() {
       page,
       limit: 20,
     }),
+  });
+
+  // Calendar needs all rentals (broad fetch, filtered on frontend)
+  const { data: calendarData } = useQuery({
+    queryKey: ['rentals-calendar'],
+    queryFn: () => rentalService.getAll({ limit: 500, page: 1 }),
+    enabled: view === 'calendar',
+    staleTime: 60 * 1000,
   });
 
   // Kanban needs all active rentals (no pagination)
@@ -363,7 +613,8 @@ export default function RentalsPage() {
     staleTime: 60 * 1000,
   });
 
-  const allRentals: Rental[] = kanbanData?.data || [];
+  const allRentals: Rental[]      = kanbanData?.data    || [];
+  const calendarRentals: Rental[] = calendarData?.data  || [];
   const rentals: Rental[] = data?.data || [];
   const { searchRef, focusedIndex, handleSearchKeyDown, handleRowKeyDown, setRowRef } = useListKeyNav({
     items: rentals,
@@ -423,20 +674,20 @@ export default function RentalsPage() {
           )}
           {/* View toggle */}
           <div className="hidden sm:flex rounded-xl border border-charcoal-500/50 overflow-hidden">
-            <button
-              onClick={() => setView('list')}
-              className={cn('flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors',
-                view === 'list' ? 'bg-charcoal-600 text-gold-400' : 'text-charcoal-300 hover:text-charcoal-100')}
-            >
-              <List size={14} /> List
-            </button>
-            <button
-              onClick={() => setView('kanban')}
-              className={cn('flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors',
-                view === 'kanban' ? 'bg-charcoal-600 text-gold-400' : 'text-charcoal-300 hover:text-charcoal-100')}
-            >
-              <Columns3 size={14} /> Kanban
-            </button>
+            {([
+              ['calendar', 'Calendar', CalendarDays],
+              ['list',     'List',     List        ],
+              ['kanban',   'Kanban',   Columns3    ],
+            ] as const).map(([v, label, Icon]) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={cn('flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors',
+                  view === v ? 'bg-charcoal-600 text-gold-400' : 'text-charcoal-300 hover:text-charcoal-100')}
+              >
+                <Icon size={14} /> {label}
+              </button>
+            ))}
           </div>
         </div>
       </Card>
@@ -499,6 +750,14 @@ export default function RentalsPage() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Calendar view */}
+      {view === 'calendar' && (
+        <CalendarView
+          rentals={calendarRentals}
+          onRentalClick={(r) => navigate(`/rentals/${r.id}`)}
+        />
       )}
     </div>
   );
